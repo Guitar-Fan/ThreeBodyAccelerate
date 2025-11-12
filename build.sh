@@ -17,7 +17,7 @@ echo "Compiling C++ to WebAssembly..."
 emcc src/main.cpp \
     -o $BUILD_DIR/main.js \
     -s WASM=1 \
-    -s EXPORTED_FUNCTIONS='["_init", "_update", "_reset", "_getBodyX", "_getBodyY", "_getBodyRadius", "_getBodyColor", "_getBodyCount", "_main"]' \
+    -s EXPORTED_FUNCTIONS='["_init", "_update", "_reset", "_getBodyX", "_getBodyY", "_getBodyRadius", "_getBodyColor", "_getBodyVX", "_getBodyVY", "_getBodyMass", "_getBodyCount", "_getTotalEnergy", "_getMomentumX", "_getMomentumY", "_getCenterOfMassX", "_getCenterOfMassY", "_setGravitationalConstant", "_getGravitationalConstant", "_setTimeStep", "_getTimeStep", "_setTimeScale", "_getTimeScale", "_setIntegrator", "_getIntegrator", "_setCollisions", "_getCollisions", "_setCollisionDamping", "_loadPreset", "_addBody", "_removeBody", "_clearBodies", "_main"]' \
     -s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
     -s ALLOW_MEMORY_GROWTH=1 \
     -s NO_EXIT_RUNTIME=1 \
