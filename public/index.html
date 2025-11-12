@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three-Body Problem Simulation</title>
+      <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+  <script>eruda.init();</script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #0a0a0a;
+            color: #ffffff;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        h1 {
+            margin: 10px 0;
+            font-size: 24px;
+            text-align: center;
+        }
+        
+        #canvasContainer {
+            position: relative;
+            margin: 20px 0;
+            border: 2px solid #333;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+        
+        canvas {
+            display: block;
+            background: #000000;
+        }
+        
+        #controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        button {
+            background: #1a1a1a;
+            border: 2px solid #00ffff;
+            color: #00ffff;
+            padding: 10px 20px;
+            font-size: 14px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #00ffff;
+            color: #000000;
+        }
+        
+        button:active {
+            transform: scale(0.95);
+        }
+        
+        #info {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            padding: 15px;
+            margin: 10px 0;
+            max-width: 800px;
+            text-align: center;
+        }
+        
+        .stat {
+            display: inline-block;
+            margin: 0 15px;
+            font-size: 12px;
+        }
+        
+        #loading {
+            font-size: 18px;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Three-Body Problem Simulation</h1>
+    
+    <div id="loading">Loading WebAssembly module...</div>
+    
+    <div id="canvasContainer" style="display: none;">
+        <canvas id="canvas" width="800" height="600"></canvas>
+    </div>
+    
+    <div id="controls" style="display: none;">
+        <button onclick="toggleSimulation()">Pause/Resume</button>
+        <button onclick="resetSimulation()">Reset</button>
+        <button onclick="toggleTrails()">Toggle Trails</button>
+    </div>
+    
+    <div id="info" style="display: none;">
+        <div class="stat">FPS: <span id="fps">0</span></div>
+        <div class="stat">Time: <span id="time">0.0</span>s</div>
+        <div class="stat">Bodies: <span id="bodyCount">3</span></div>
+    </div>
+
+    <script>
+        var Module = {
+            onRuntimeInitialized: function() {
+                console.log('WebAssembly module loaded');
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('canvasContainer').style.display = 'block';
+                document.getElementById('controls').style.display = 'flex';
+                document.getElementById('info').style.display = 'block';
+                startSimulation();
+            }
+        };
+    </script>
+    <script src="main.js"></script>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let isRunning = true;
+        let showTrails = true;
+        let frameCount = 0;
+        let lastTime = Date.now();
+        let simulationTime = 0;
+        
+        function toggleSimulation() {
+            isRunning = !isRunning;
+        }
+        
+        function resetSimulation() {
+            Module._reset();
+            simulationTime = 0;
+            if (showTrails) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+        
+        function toggleTrails() {
+            showTrails = !showTrails;
+            if (!showTrails) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+        
+        function rgbaToStyle(rgba) {
+            const r = (rgba >> 24) & 0xFF;
+            const g = (rgba >> 16) & 0xFF;
+            const b = (rgba >> 8) & 0xFF;
+            const a = (rgba & 0xFF) / 255;
+            return `rgba(${r}, ${g}, ${b}, ${a})`;
+        }
+        
+        function drawBody(x, y, radius, color) {
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = rgbaToStyle(color);
+            ctx.fill();
+            
+            // Add glow effect
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius * 2);
+            gradient.addColorStop(0, rgbaToStyle(color));
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(x, y, radius * 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        function updateStats() {
+            const now = Date.now();
+            const deltaTime = (now - lastTime) / 1000;
+            
+            if (deltaTime >= 1.0) {
+                const fps = Math.round(frameCount / deltaTime);
+                document.getElementById('fps').textContent = fps;
+                frameCount = 0;
+                lastTime = now;
+            }
+            
+            document.getElementById('time').textContent = simulationTime.toFixed(2);
+            document.getElementById('bodyCount').textContent = Module._getBodyCount();
+        }
+        
+        function animate() {
+            if (isRunning) {
+                // Update physics (multiple steps per frame for stability)
+                for (let i = 0; i < 5; i++) {
+                    Module._update();
+                    simulationTime += 0.01;
+                }
+                
+                // Clear canvas with trail effect
+                if (showTrails) {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                } else {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+                
+                // Draw all bodies
+                const bodyCount = Module._getBodyCount();
+                for (let i = 0; i < bodyCount; i++) {
+                    const x = Module._getBodyX(i);
+                    const y = Module._getBodyY(i);
+                    const radius = Module._getBodyRadius(i);
+                    const color = Module._getBodyColor(i);
+                    
+                    drawBody(x, y, radius, color);
+                }
+                
+                frameCount++;
+                updateStats();
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        function startSimulation() {
+            Module._init();
+            lastTime = Date.now();
+            animate();
+        }
+    </script>
+</body>
+</html>
