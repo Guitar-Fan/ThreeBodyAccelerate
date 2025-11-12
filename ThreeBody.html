@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Interactive Three-Body Problem Simulator - Explore gravitational chaos">
+    <meta name="author" content="Three-Body Accelerate">
+    <title>Three-Body Problem Simulator</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loading-content">
+            <div class="orbit-loader">
+                <div class="orbit"></div>
+                <div class="orbit"></div>
+                <div class="orbit"></div>
+            </div>
+            <h1>Three-Body Problem</h1>
+            <p id="loading-text">Initializing gravitational chaos...</p>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="app" style="display: none;">
+        <!-- Header -->
+        <header>
+            <h1>🌌 Three-Body Problem Simulator</h1>
+            <div class="header-controls">
+                <button id="toggle-settings" class="icon-btn" title="Settings">⚙️</button>
+                <button id="toggle-help" class="icon-btn" title="Help">❓</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar -->
+            <aside id="sidebar" class="sidebar">
+                <div class="panel">
+                    <h2>🎮 Controls</h2>
+                    
+                    <!-- Simulation Controls -->
+                    <div class="control-group">
+                        <div class="button-row">
+                            <button id="btn-play" class="control-btn primary">▶️ Play</button>
+                            <button id="btn-pause" class="control-btn" style="display: none;">⏸️ Pause</button>
+                            <button id="btn-step" class="control-btn">⏭️ Step</button>
+                            <button id="btn-reset" class="control-btn">🔄 Reset</button>
+                        </div>
+                        <div class="button-row">
+                            <button id="btn-reverse" class="control-btn">⏪ Reverse Time</button>
+                            <button id="btn-clear-trails" class="control-btn">🧹 Clear Trails</button>
+                        </div>
+                    </div>
+
+                    <!-- Time Controls -->
+                    <div class="control-group">
+                        <label>Time Step (dt): <span id="dt-value">0.01</span></label>
+                        <input type="range" id="dt-slider" min="0.001" max="0.1" step="0.001" value="0.01">
+                        
+                        <label>Speed: <span id="speed-value">1×</span></label>
+                        <input type="range" id="speed-slider" min="0.1" max="10" step="0.1" value="1">
+                    </div>
+
+                    <!-- Integrator Selection -->
+                    <div class="control-group">
+                        <label>Integrator:</label>
+                        <select id="integrator-select">
+                            <option value="verlet">Velocity Verlet (Symplectic)</option>
+                            <option value="rk4">Runge-Kutta 4th Order</option>
+                            <option value="euler">Euler (Fast, Less Accurate)</option>
+                        </select>
+                    </div>
+
+                    <!-- Physics Parameters -->
+                    <div class="control-group">
+                        <label>Softening (ε): <span id="softening-value">0.01</span></label>
+                        <input type="range" id="softening-slider" min="0" max="0.5" step="0.01" value="0.01">
+                        
+                        <label>Gravitational Constant (G): <span id="g-value">1.0</span></label>
+                        <input type="range" id="g-slider" min="0.1" max="5" step="0.1" value="1">
+                    </div>
+
+                    <!-- Collision Settings -->
+                    <div class="control-group">
+                        <label>Collision Mode:</label>
+                        <select id="collision-mode">
+                            <option value="merge">Merge Bodies</option>
+                            <option value="elastic">Elastic Bounce</option>
+                            <option value="none">Pass Through</option>
+                        </select>
+                    </div>
+
+                    <!-- Visual Settings -->
+                    <div class="control-group">
+                        <h3>🎨 Visuals</h3>
+                        <label>
+                            <input type="checkbox" id="show-trails" checked> Show Trails
+                        </label>
+                        <label>Trail Length: <span id="trail-length-value">500</span></label>
+                        <input type="range" id="trail-length" min="50" max="2000" step="50" value="500">
+                        
+                        <label>
+                            <input type="checkbox" id="show-velocities"> Show Velocity Vectors
+                        </label>
+                        <label>
+                            <input type="checkbox" id="show-forces"> Show Force Vectors
+                        </label>
+                        <label>
+                            <input type="checkbox" id="show-grid"> Show Grid
+                        </label>
+                        <label>
+                            <input type="checkbox" id="glow-effect" checked> Glow Effect
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Presets Panel -->
+                <div class="panel">
+                    <h2>🎯 Presets</h2>
+                    <div id="presets-container" class="presets-grid"></div>
+                </div>
+
+                <!-- Bodies Panel -->
+                <div class="panel">
+                    <h2>⭐ Bodies</h2>
+                    <button id="add-body" class="control-btn">➕ Add Body</button>
+                    <div id="bodies-list"></div>
+                </div>
+
+                <!-- Export/Import -->
+                <div class="panel">
+                    <h2>💾 Save/Load</h2>
+                    <button id="export-json" class="control-btn">📥 Export JSON</button>
+                    <button id="import-json" class="control-btn">📤 Import JSON</button>
+                    <button id="permalink" class="control-btn">🔗 Copy Permalink</button>
+                    <input type="file" id="file-input" accept=".json" style="display: none;">
+                </div>
+            </aside>
+
+            <!-- Canvas Area -->
+            <main class="canvas-container">
+                <canvas id="main-canvas"></canvas>
+                <div class="canvas-info">
+                    <div class="info-text">
+                        Click to add bodies • Drag to set velocity • Scroll to zoom
+                    </div>
+                </div>
+            </main>
+
+            <!-- Right Panel - Diagnostics -->
+            <aside id="right-panel" class="right-panel">
+                <!-- Diagnostics -->
+                <div class="panel">
+                    <h2>📊 Diagnostics</h2>
+                    <div id="diagnostics" class="diagnostics">
+                        <div class="diag-item">
+                            <span class="diag-label">Time:</span>
+                            <span id="diag-time">0.00</span>
+                        </div>
+                        <div class="diag-item">
+                            <span class="diag-label">Steps:</span>
+                            <span id="diag-steps">0</span>
+                        </div>
+                        <div class="diag-item">
+                            <span class="diag-label">FPS:</span>
+                            <span id="diag-fps">60</span>
+                        </div>
+                        <div class="diag-item">
+                            <span class="diag-label">Bodies:</span>
+                            <span id="diag-bodies">3</span>
+                        </div>
+                        <div class="diag-item">
+                            <span class="diag-label">Total Energy:</span>
+                            <span id="diag-energy">0.00</span>
+                        </div>
+                        <div class="diag-item">
+                            <span class="diag-label">ΔE (%):</span>
+                            <span id="diag-energy-drift">0.00</span>
+                        </div>
+                        <div class="diag-item">
+                            <span class="diag-label">Momentum:</span>
+                            <span id="diag-momentum">0.00</span>
+                        </div>
+                        <div class="diag-item">
+                            <span class="diag-label">Angular Mom.:</span>
+                            <span id="diag-angular">0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Energy Graph -->
+                <div class="panel">
+                    <h2>📈 Energy History</h2>
+                    <canvas id="energy-graph" width="280" height="150"></canvas>
+                </div>
+
+                <!-- Phase Space -->
+                <div class="panel">
+                    <h2>🌀 Phase Space</h2>
+                    <canvas id="phase-space" width="280" height="150"></canvas>
+                    <div class="control-group">
+                        <label>
+                            <input type="checkbox" id="poincare-section"> Poincaré Section
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Center of Mass -->
+                <div class="panel">
+                    <h2>🎯 Center of Mass</h2>
+                    <div class="diagnostics">
+                        <div class="diag-item">
+                            <span class="diag-label">X:</span>
+                            <span id="com-x">0.00</span>
+                        </div>
+                        <div class="diag-item">
+                            <span class="diag-label">Y:</span>
+                            <span id="com-y">0.00</span>
+                        </div>
+                        <div class="diag-item">
+                            <span class="diag-label">Drift:</span>
+                            <span id="com-drift">0.00</span>
+                        </div>
+                        <label>
+                            <input type="checkbox" id="track-com"> Track COM
+                        </label>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="help-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>🌟 Three-Body Problem Simulator - Help</h2>
+            
+            <h3>What is the Three-Body Problem?</h3>
+            <p>The three-body problem is a classical challenge in physics: predicting the motion of three masses under mutual gravitational attraction. Unlike the two-body problem (which has analytical solutions), the three-body system exhibits chaotic behavior - tiny changes in initial conditions lead to drastically different outcomes.</p>
+            
+            <h3>Controls</h3>
+            <ul>
+                <li><strong>Click</strong> on canvas to place a body</li>
+                <li><strong>Drag</strong> from a body to set initial velocity</li>
+                <li><strong>Scroll</strong> to zoom in/out</li>
+                <li><strong>Right-click</strong> body to delete</li>
+                <li><strong>Space</strong> to play/pause</li>
+                <li><strong>R</strong> to reset</li>
+            </ul>
+
+            <h3>Features</h3>
+            <ul>
+                <li><strong>Integrators:</strong> Choose between symplectic (energy-conserving) and higher-order methods</li>
+                <li><strong>Presets:</strong> Explore famous solutions like the Figure-Eight and Lagrange points</li>
+                <li><strong>Diagnostics:</strong> Monitor energy conservation and momentum</li>
+                <li><strong>Phase Space:</strong> Visualize the system's evolution in phase space</li>
+                <li><strong>Time Reversal:</strong> Run the simulation backwards to test numerical accuracy</li>
+                <li><strong>Poincaré Sections:</strong> Study periodic orbits and chaotic regions</li>
+            </ul>
+
+            <h3>Tips</h3>
+            <ul>
+                <li>Lower time step (dt) = more accurate but slower</li>
+                <li>Softening parameter prevents singularities when bodies get too close</li>
+                <li>Energy drift indicates numerical error - try lowering dt or using Verlet integrator</li>
+                <li>Symplectic integrators preserve energy structure better for long simulations</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- JavaScript Modules -->
+    <!-- Eruda for mobile debugging -->
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>eruda.init();</script>
+    
+    <script src="js/physics.js"></script>
+    <script src="js/renderer.js"></script>
+    <script src="js/presets.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/diagnostics.js"></script>
+    <script src="js/app.js"></script>
+    
+    <!-- Loading Progress Script -->
+    <script>
+        // Loading progress simulation
+        let loadProgress = 0;
+        const progressBar = document.getElementById('progress-bar');
+        const loadingText = document.getElementById('loading-text');
+        const loadingScreen = document.getElementById('loading-screen');
+        const appElement = document.getElementById('app');
+        
+        const messages = [
+            'Initializing physics engine...',
+            'Loading orbital mechanics...',
+            'Preparing integrators...',
+            'Setting up presets...',
+            'Finalizing simulation...',
+            'Ready!'
+        ];
+        
+        const progressInterval = setInterval(() => {
+            loadProgress += Math.random() * 15 + 5;
+            if (loadProgress >= 100) {
+                loadProgress = 100;
+                clearInterval(progressInterval);
+            }
+            
+            progressBar.style.width = loadProgress + '%';
+            
+            const messageIndex = Math.floor((loadProgress / 100) * (messages.length - 1));
+            loadingText.textContent = messages[messageIndex];
+            
+            if (loadProgress >= 100) {
+                setTimeout(() => {
+                    loadingScreen.style.opacity = '0';
+                    loadingScreen.style.transition = 'opacity 0.5s ease-out';
+                    
+                    setTimeout(() => {
+                        loadingScreen.style.display = 'none';
+                        appElement.style.display = 'block';
+                        appElement.style.opacity = '0';
+                        
+                        // Fade in the app
+                        setTimeout(() => {
+                            appElement.style.transition = 'opacity 0.5s ease-in';
+                            appElement.style.opacity = '1';
+                        }, 50);
+                    }, 500);
+                }, 300);
+            }
+        }, 100);
+    </script>
+</body>
+</html>
