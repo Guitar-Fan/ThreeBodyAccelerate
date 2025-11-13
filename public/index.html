@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three-Body Problem Simulation - Advanced Physics</title>
+    <title>Classical Three-Body Problem - Numerical Simulation</title>
     <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
     <script>eruda.init();</script>
     <style>
@@ -13,51 +13,57 @@
         
         body {
             margin: 0;
-            padding: 10px;
-            background: #0a0a0a;
-            color: #ffffff;
-            font-family: 'Courier New', monospace;
+            padding: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1e 100%);
+            color: #e8e8e8;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             display: flex;
-            gap: 10px;
+            gap: 0;
             min-height: 100vh;
         }
         
         #sidebar {
-            width: 280px;
-            background: #1a1a1a;
-            border: 2px solid #333;
-            padding: 15px;
+            width: 300px;
+            background: rgba(22, 22, 35, 0.95);
+            border-right: 1px solid rgba(100, 100, 120, 0.2);
+            padding: 20px;
             overflow-y: auto;
             max-height: 100vh;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
         }
         
         #mainContent {
             flex: 1;
             display: flex;
             flex-direction: column;
-            align-items: center;
+            padding: 20px;
         }
         
         h1 {
-            margin: 0 0 10px 0;
-            font-size: 24px;
-            text-align: center;
-            color: #00ffff;
+            margin: 0 0 20px 0;
+            font-size: 28px;
+            font-weight: 300;
+            letter-spacing: 1px;
+            color: #f0f0f5;
         }
         
         h2 {
-            font-size: 16px;
-            margin: 15px 0 8px 0;
-            color: #00ffff;
-            border-bottom: 1px solid #333;
-            padding-bottom: 5px;
+            font-size: 13px;
+            font-weight: 600;
+            margin: 25px 0 12px 0;
+            color: #9d9db0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid rgba(100, 100, 120, 0.15);
+            padding-bottom: 8px;
         }
         
         #canvasContainer {
             position: relative;
-            margin: 10px 0;
-            border: 2px solid #333;
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+            background: #000;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
         }
         
         canvas {
@@ -66,173 +72,356 @@
         }
         
         .control-group {
-            margin: 10px 0;
+            margin: 15px 0;
         }
         
         label {
             display: block;
-            font-size: 11px;
-            margin-bottom: 3px;
-            color: #aaa;
+            font-size: 12px;
+            margin-bottom: 6px;
+            color: #b0b0c0;
+            font-weight: 500;
         }
         
         button {
             width: 100%;
-            background: #1a1a1a;
-            border: 2px solid #00ffff;
-            color: #00ffff;
-            padding: 8px;
-            font-size: 12px;
+            background: linear-gradient(180deg, #2a2a3e 0%, #1f1f2e 100%);
+            border: 1px solid rgba(100, 100, 120, 0.3);
+            color: #e0e0f0;
+            padding: 10px 14px;
+            font-size: 13px;
             cursor: pointer;
-            font-family: 'Courier New', monospace;
-            transition: all 0.3s;
-            margin: 3px 0;
+            font-family: inherit;
+            transition: all 0.2s ease;
+            margin: 4px 0;
+            border-radius: 3px;
+            font-weight: 500;
         }
         
         button:hover {
-            background: #00ffff;
-            color: #000000;
+            background: linear-gradient(180deg, #353550 0%, #2a2a40 100%);
+            border-color: rgba(120, 120, 150, 0.5);
+            transform: translateY(-1px);
         }
         
         button:active {
-            transform: scale(0.98);
+            transform: translateY(0);
+            background: linear-gradient(180deg, #1f1f2e 0%, #1a1a28 100%);
         }
         
-        button.active {
-            background: #00ffff;
-            color: #000000;
+        button.primary {
+            background: linear-gradient(180deg, #4a5568 0%, #3a4556 100%);
+            border-color: rgba(140, 140, 160, 0.4);
+        }
+        
+        button.primary:hover {
+            background: linear-gradient(180deg, #5a6578 0%, #4a5568 100%);
         }
         
         input[type="range"] {
             width: 100%;
-            margin: 5px 0;
+            margin: 8px 0;
+            -webkit-appearance: none;
+            height: 4px;
+            background: rgba(100, 100, 120, 0.2);
+            border-radius: 2px;
+            outline: none;
         }
         
-        input[type="number"] {
-            width: 100%;
-            background: #000;
-            border: 1px solid #333;
-            color: #0ff;
-            padding: 5px;
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            background: #7a7a9a;
+            cursor: pointer;
+            border-radius: 50%;
+            transition: background 0.2s;
         }
         
-        select {
-            width: 100%;
-            background: #000;
-            border: 1px solid #333;
-            color: #0ff;
-            padding: 5px;
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
+        input[type="range"]::-webkit-slider-thumb:hover {
+            background: #9a9aba;
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            background: #7a7a9a;
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
         }
         
         .value-display {
-            color: #0ff;
-            font-size: 11px;
-            margin-top: 3px;
+            color: #8a8aa5;
+            font-size: 12px;
+            margin-top: 4px;
+            font-family: 'Courier New', monospace;
         }
         
         #stats {
-            background: #1a1a1a;
-            border: 1px solid #333;
-            padding: 10px;
-            margin: 10px 0;
-            font-size: 11px;
+            background: rgba(30, 30, 45, 0.6);
+            border: 1px solid rgba(100, 100, 120, 0.15);
+            border-radius: 4px;
+            padding: 12px;
+            margin: 15px 0;
+            font-size: 12px;
             width: 100%;
         }
         
         .stat-row {
             display: flex;
             justify-content: space-between;
-            margin: 3px 0;
-            padding: 3px 0;
-            border-bottom: 1px solid #222;
+            margin: 6px 0;
+            padding: 4px 0;
         }
         
         .stat-label {
-            color: #888;
+            color: #8a8aa5;
+            font-weight: 500;
         }
         
         .stat-value {
-            color: #0ff;
-            font-weight: bold;
+            color: #d0d0e5;
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
         }
         
         #loading {
-            font-size: 18px;
+            font-size: 16px;
             text-align: center;
-            padding: 20px;
+            padding: 40px;
+            color: #b0b0c0;
         }
         
         .preset-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 5px;
+            gap: 6px;
+            margin-top: 8px;
         }
         
         .preset-grid button {
-            font-size: 10px;
-            padding: 6px;
+            font-size: 12px;
+            padding: 8px;
         }
         
         .checkbox-container {
             display: flex;
             align-items: center;
-            margin: 8px 0;
+            margin: 10px 0;
+            cursor: pointer;
+            user-select: none;
         }
         
         .checkbox-container input[type="checkbox"] {
-            margin-right: 8px;
+            margin-right: 10px;
             width: 16px;
             height: 16px;
+            cursor: pointer;
+            accent-color: #6a6a8a;
         }
         
         .checkbox-container label {
             margin: 0;
             flex: 1;
+            cursor: pointer;
+            color: #b0b0c0;
         }
         
         #physicsInfo {
-            background: #0a0a0a;
-            border: 1px solid #333;
-            padding: 10px;
-            font-size: 10px;
-            color: #888;
-            margin: 10px 0;
-            line-height: 1.4;
+            background: rgba(20, 20, 30, 0.5);
+            border: 1px solid rgba(100, 100, 120, 0.1);
+            border-radius: 4px;
+            padding: 12px;
+            font-size: 11px;
+            color: #8a8aa0;
+            margin: 15px 0 0 0;
+            line-height: 1.6;
+        }
+        
+        #physicsInfo strong {
+            color: #a0a0b5;
+            display: block;
+            margin-bottom: 6px;
         }
         
         .math-formula {
-            color: #0ff;
-            font-style: italic;
+            color: #9a9ab5;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            margin: 3px 0;
+            padding-left: 4px;
+        }
+        
+        /* Body Info Modal */
+        #bodyInfoModal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(22, 22, 35, 0.98);
+            border: 1px solid rgba(100, 100, 120, 0.4);
+            border-radius: 8px;
+            padding: 20px;
+            min-width: 300px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            display: none;
+        }
+        
+        #bodyInfoModal.visible {
+            display: block;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(100, 100, 120, 0.2);
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            color: #f0f0f5;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            color: #8a8aa5;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            line-height: 1;
+        }
+        
+        .close-btn:hover {
+            color: #d0d0e5;
+        }
+        
+        .property-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+            padding: 5px 0;
+        }
+        
+        .property-label {
+            color: #8a8aa5;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .property-value {
+            color: #d0d0e5;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        
+        .property-input {
+            background: rgba(30, 30, 45, 0.6);
+            border: 1px solid rgba(100, 100, 120, 0.3);
+            color: #d0d0e5;
+            padding: 5px 8px;
+            font-size: 12px;
+            border-radius: 3px;
+            width: 100px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .property-input:focus {
+            outline: none;
+            border-color: rgba(120, 120, 150, 0.6);
+        }
+        
+        /* Energy Graph */
+        #energyGraph {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 250px;
+            height: 120px;
+            background: rgba(22, 22, 35, 0.9);
+            border: 1px solid rgba(100, 100, 120, 0.3);
+            border-radius: 4px;
+            padding: 10px;
+            display: none;
+        }
+        
+        #energyGraph.visible {
+            display: block;
+        }
+        
+        #energyGraph canvas {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Creation indicator */
+        .creation-indicator {
+            position: absolute;
+            pointer-events: none;
+            border: 2px dashed rgba(100, 200, 255, 0.6);
+            border-radius: 50%;
+        }
+        
+        /* Instructions overlay */
+        #instructions {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(22, 22, 35, 0.85);
+            border: 1px solid rgba(100, 100, 120, 0.2);
+            border-radius: 4px;
+            padding: 10px 15px;
+            font-size: 11px;
+            color: #8a8aa5;
+            max-width: 300px;
+            line-height: 1.6;
+        }
+        
+        #instructions strong {
+            color: #a0a0b5;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .instruction-item {
             margin: 3px 0;
         }
     </style>
 </head>
 <body>
     <div id="sidebar">
-        <h2>⚙️ Controls</h2>
+        <h2>Simulation Control</h2>
         
         <div class="control-group">
-            <button onclick="toggleSimulation()" id="pauseBtn">⏸ Pause</button>
-            <button onclick="resetSimulation()">🔄 Reset</button>
+            <button class="primary" onclick="toggleSimulation()" id="pauseBtn">Pause</button>
+            <button onclick="resetSimulation()">Reset Simulation</button>
         </div>
         
-        <h2>🎨 Presets</h2>
+        <h2>Initial Configurations</h2>
         <div class="preset-grid">
             <button onclick="loadPreset(0)">Figure-8</button>
             <button onclick="loadPreset(1)">Stable</button>
             <button onclick="loadPreset(2)">Chaotic</button>
             <button onclick="loadPreset(3)">Binary</button>
             <button onclick="loadPreset(4)">Pythagorean</button>
+            <button onclick="loadPreset(5)" style="grid-column: 1 / -1; background: linear-gradient(180deg, #3a4a68 0%, #2a3a56 100%);">🌌 Solar System</button>
         </div>
         
-        <h2>🔬 Physics Parameters</h2>
+        <h2>Physics Parameters</h2>
         
         <div class="control-group">
-            <label>Gravitational Constant (G): <span id="gValue">1.00</span></label>
+            <label>Gravitational Constant: <span id="gValue">1.00</span></label>
             <input type="range" id="gSlider" min="0.1" max="3" step="0.1" value="1.0" oninput="updateG(this.value)">
         </div>
         
@@ -242,13 +431,13 @@
         </div>
         
         <div class="control-group">
-            <label>Integration Time Step: <span id="dtValue">0.010</span></label>
+            <label>Integration Step: <span id="dtValue">0.010</span></label>
             <input type="range" id="dtSlider" min="0.001" max="0.05" step="0.001" value="0.01" oninput="updateDt(this.value)">
         </div>
         
         <div class="checkbox-container">
             <input type="checkbox" id="rk4Check" onchange="toggleIntegrator(this.checked)">
-            <label for="rk4Check">Use RK4 Integration (slower, more accurate)</label>
+            <label for="rk4Check">RK4 Integration (higher accuracy)</label>
         </div>
         
         <div class="checkbox-container">
@@ -256,26 +445,51 @@
             <label for="collisionCheck">Enable Collisions</label>
         </div>
         
+        <div class="checkbox-container">
+            <input type="checkbox" id="mergingCheck" checked onchange="toggleMerging(this.checked)">
+            <label for="mergingCheck">Body Merging</label>
+        </div>
+        
+        <div class="checkbox-container">
+            <input type="checkbox" id="tidalCheck" onchange="toggleTidalForces(this.checked)">
+            <label for="tidalCheck">Tidal Forces</label>
+        </div>
+        
+        <div class="checkbox-container">
+            <input type="checkbox" id="gwCheck" onchange="toggleGravitationalWaves(this.checked)">
+            <label for="gwCheck">Gravitational Waves</label>
+        </div>
+        
+        <div class="control-group">
+            <label>Softening: <span id="softeningValue">1.0</span></label>
+            <input type="range" id="softeningSlider" min="0.1" max="5" step="0.1" value="1.0" oninput="updateSoftening(this.value)">
+        </div>
+        
         <div class="control-group">
             <label>Collision Damping: <span id="dampingValue">0.80</span></label>
             <input type="range" id="dampingSlider" min="0" max="1" step="0.05" value="0.8" oninput="updateDamping(this.value)">
         </div>
         
-        <h2>🎬 Display Options</h2>
+        <h2>Display Settings</h2>
         
         <div class="checkbox-container">
             <input type="checkbox" id="trailCheck" checked onchange="toggleTrails()">
-            <label for="trailCheck">Show Trails</label>
+            <label for="trailCheck">Orbital Trails</label>
         </div>
         
         <div class="checkbox-container">
             <input type="checkbox" id="velocityCheck" onchange="toggleVelocityVectors()">
-            <label for="velocityCheck">Show Velocity Vectors</label>
+            <label for="velocityCheck">Velocity Vectors</label>
         </div>
         
         <div class="checkbox-container">
             <input type="checkbox" id="comCheck" onchange="toggleCenterOfMass()">
-            <label for="comCheck">Show Center of Mass</label>
+            <label for="comCheck">Center of Mass</label>
+        </div>
+        
+        <div class="checkbox-container">
+            <input type="checkbox" id="energyGraphCheck" onchange="toggleEnergyGraph()">
+            <label for="energyGraphCheck">Energy Graph</label>
         </div>
         
         <div class="control-group">
@@ -283,51 +497,117 @@
             <input type="range" id="trailOpacitySlider" min="0.01" max="0.3" step="0.01" value="0.05" oninput="updateTrailOpacity(this.value)">
         </div>
         
-        <h2>📊 System Properties</h2>
+        <h2>Conservation Laws</h2>
         <div id="stats">
             <div class="stat-row">
-                <span class="stat-label">Bodies:</span>
+                <span class="stat-label">Bodies</span>
                 <span class="stat-value" id="bodyCount">3</span>
             </div>
             <div class="stat-row">
-                <span class="stat-label">Total Energy:</span>
+                <span class="stat-label">Total Energy</span>
                 <span class="stat-value" id="totalEnergy">0.0</span>
             </div>
             <div class="stat-row">
-                <span class="stat-label">Momentum X:</span>
-                <span class="stat-value" id="momentumX">0.0</span>
+                <span class="stat-label">Energy Drift</span>
+                <span class="stat-value" id="energyDrift" style="color: #7a7a9a;">0.00%</span>
             </div>
             <div class="stat-row">
-                <span class="stat-label">Momentum Y:</span>
-                <span class="stat-value" id="momentumY">0.0</span>
+                <span class="stat-label">Linear Momentum</span>
+                <span class="stat-value" id="momentumMag">0.0</span>
             </div>
             <div class="stat-row">
-                <span class="stat-label">FPS:</span>
+                <span class="stat-label">Momentum Drift</span>
+                <span class="stat-value" id="momentumDrift" style="color: #7a7a9a;">0.00%</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Angular Momentum</span>
+                <span class="stat-value" id="angularMomentum">0.0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Frame Rate</span>
                 <span class="stat-value" id="fps">0</span>
             </div>
             <div class="stat-row">
-                <span class="stat-label">Sim Time:</span>
+                <span class="stat-label">Simulation Time</span>
                 <span class="stat-value" id="simTime">0.0s</span>
             </div>
         </div>
         
         <div id="physicsInfo">
-            <strong>Physics Formulas:</strong>
-            <div class="math-formula">F = G·m₁·m₂/r²</div>
-            <div class="math-formula">KE = ½mv²</div>
-            <div class="math-formula">PE = -Gm₁m₂/r</div>
-            <div class="math-formula">E = KE + PE</div>
-            <div class="math-formula">p = mv (conserved)</div>
+            <strong>Classical Three-Body Problem:</strong>
+            <div class="math-formula">• Newton's Law: F = Gm₁m₂/r²</div>
+            <div class="math-formula">• Total Energy: E = ½Σmv² - ΣGm₁m₂/r</div>
+            <div class="math-formula">• Linear Momentum: P = Σmᵢvᵢ (conserved)</div>
+            <div class="math-formula">• Angular Momentum: L = Σrᵢ × pᵢ (conserved)</div>
+            <div class="math-formula">• Numerical: Verlet (symplectic) or RK4</div>
+            <div class="math-formula">• Softening ε prevents r→0 singularities</div>
         </div>
     </div>
     
     <div id="mainContent">
-        <h1>Three-Body Problem - Advanced Physics Simulation</h1>
+        <h1>Classical Three-Body Problem</h1>
         
-        <div id="loading">Loading WebAssembly module...</div>
+        <div id="loading">Initializing physics engine...</div>
         
         <div id="canvasContainer" style="display: none;">
             <canvas id="canvas" width="900" height="700"></canvas>
+            
+            <!-- Instructions overlay -->
+            <div id="instructions">
+                <strong>Interactive Controls:</strong>
+                <div class="instruction-item">🖱️ Click & drag bodies to move them</div>
+                <div class="instruction-item">⇧ Shift + drag to create new bodies</div>
+                <div class="instruction-item">⌘/Ctrl + drag to pan camera</div>
+                <div class="instruction-item">🖱️ Scroll to zoom in/out</div>
+                <div class="instruction-item">␣ Space to pause/resume</div>
+                <div class="instruction-item">⌫ Delete to remove selected body</div>
+                <div class="instruction-item">T to toggle trails, V for vectors</div>
+            </div>
+            
+            <!-- Energy graph -->
+            <div id="energyGraph">
+                <canvas id="energyCanvas" width="230" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Body Info Modal -->
+    <div id="bodyInfoModal">
+        <div class="modal-header">
+            <h3>Body Properties</h3>
+            <button class="close-btn" onclick="hideBodyInfo()">×</button>
+        </div>
+        <div id="bodyInfoContent">
+            <div class="property-row">
+                <span class="property-label">Position X:</span>
+                <input type="number" class="property-input" id="bodyPosX" step="1">
+            </div>
+            <div class="property-row">
+                <span class="property-label">Position Y:</span>
+                <input type="number" class="property-input" id="bodyPosY" step="1">
+            </div>
+            <div class="property-row">
+                <span class="property-label">Velocity X:</span>
+                <input type="number" class="property-input" id="bodyVelX" step="0.1">
+            </div>
+            <div class="property-row">
+                <span class="property-label">Velocity Y:</span>
+                <input type="number" class="property-input" id="bodyVelY" step="0.1">
+            </div>
+            <div class="property-row">
+                <span class="property-label">Mass:</span>
+                <input type="number" class="property-input" id="bodyMass" step="1">
+            </div>
+            <div class="property-row">
+                <span class="property-label">Speed:</span>
+                <span class="property-value" id="bodySpeed">0.0</span>
+            </div>
+            <div class="property-row">
+                <span class="property-label">KE:</span>
+                <span class="property-value" id="bodyKE">0.0</span>
+            </div>
+            <button onclick="applyBodyChanges()" style="margin-top: 10px;">Apply Changes</button>
+            <button onclick="deleteSelectedBody()" style="background: linear-gradient(180deg, #5a2a2a 0%, #3a1a1a 100%);">Delete Body</button>
         </div>
     </div>
 
@@ -356,10 +636,29 @@
         let lastTime = Date.now();
         let simulationTime = 0;
         
-        // Control functions
+        // Camera controls
+        let cameraX = 0;
+        let cameraY = 0;
+        let cameraZoom = 1.0;
+        let isDraggingCamera = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+        
+        // Interactive controls
+        let isDraggingBody = false;
+        let draggedBodyIndex = -1;
+        let isCreatingBody = false;
+        let creationStartX = 0;
+        let creationStartY = 0;
+        let selectedBodyIndex = -1;
+        
+        // Energy history for graphing
+        let energyHistory = [];
+        const maxHistoryLength = 200;
+        
         function toggleSimulation() {
             isRunning = !isRunning;
-            document.getElementById('pauseBtn').textContent = isRunning ? '⏸ Pause' : '▶ Play';
+            document.getElementById('pauseBtn').textContent = isRunning ? 'Pause' : 'Resume';
         }
         
         function resetSimulation() {
@@ -399,6 +698,23 @@
             Module._setCollisions(enabled ? 1 : 0);
         }
         
+        function toggleMerging(enabled) {
+            Module._setMergingEnabled(enabled ? 1 : 0);
+        }
+        
+        function toggleTidalForces(enabled) {
+            Module._setTidalForces(enabled ? 1 : 0);
+        }
+        
+        function toggleGravitationalWaves(enabled) {
+            Module._setGravitationalWaves(enabled ? 1 : 0);
+        }
+        
+        function updateSoftening(value) {
+            Module._setSofteningLength(parseFloat(value));
+            document.getElementById('softeningValue').textContent = parseFloat(value).toFixed(1);
+        }
+        
         function updateDamping(value) {
             Module._setCollisionDamping(parseFloat(value));
             document.getElementById('dampingValue').textContent = parseFloat(value).toFixed(2);
@@ -420,12 +736,122 @@
             showCenterOfMass = !showCenterOfMass;
         }
         
+        function toggleEnergyGraph() {
+            const graphElement = document.getElementById('energyGraph');
+            graphElement.classList.toggle('visible');
+        }
+        
         function updateTrailOpacity(value) {
             trailOpacity = parseFloat(value);
             document.getElementById('trailOpacityValue').textContent = parseFloat(value).toFixed(2);
         }
         
-        // Drawing functions
+        function updateBodyInfo(bodyIndex) {
+            if (bodyIndex < 0 || bodyIndex >= Module._getBodyCount()) return;
+            
+            selectedBodyIndex = bodyIndex;
+            const x = Module._getBodyX(bodyIndex);
+            const y = Module._getBodyY(bodyIndex);
+            const vx = Module._getBodyVX(bodyIndex);
+            const vy = Module._getBodyVY(bodyIndex);
+            const mass = Module._getBodyMass(bodyIndex);
+            const speed = Math.sqrt(vx * vx + vy * vy);
+            const ke = Module._getKineticEnergy(bodyIndex);
+            
+            document.getElementById('bodyPosX').value = x.toFixed(2);
+            document.getElementById('bodyPosY').value = y.toFixed(2);
+            document.getElementById('bodyVelX').value = vx.toFixed(3);
+            document.getElementById('bodyVelY').value = vy.toFixed(3);
+            document.getElementById('bodyMass').value = mass.toFixed(2);
+            document.getElementById('bodySpeed').textContent = speed.toFixed(3);
+            document.getElementById('bodyKE').textContent = ke.toFixed(2);
+            
+            document.getElementById('bodyInfoModal').classList.add('visible');
+        }
+        
+        function hideBodyInfo() {
+            document.getElementById('bodyInfoModal').classList.remove('visible');
+            selectedBodyIndex = -1;
+        }
+        
+        function applyBodyChanges() {
+            if (selectedBodyIndex < 0) return;
+            
+            const x = parseFloat(document.getElementById('bodyPosX').value);
+            const y = parseFloat(document.getElementById('bodyPosY').value);
+            const vx = parseFloat(document.getElementById('bodyVelX').value);
+            const vy = parseFloat(document.getElementById('bodyVelY').value);
+            const mass = parseFloat(document.getElementById('bodyMass').value);
+            
+            Module._setBodyPosition(selectedBodyIndex, x, y);
+            Module._setBodyVelocity(selectedBodyIndex, vx, vy);
+            Module._setBodyMass(selectedBodyIndex, mass);
+            Module._saveState();
+            
+            updateBodyInfo(selectedBodyIndex);
+        }
+        
+        function deleteSelectedBody() {
+            if (selectedBodyIndex < 0) return;
+            Module._removeBody(selectedBodyIndex);
+            hideBodyInfo();
+        }
+        
+        function updateEnergyGraph() {
+            const energy = Module._getTotalEnergy();
+            energyHistory.push(energy);
+            if (energyHistory.length > maxHistoryLength) {
+                energyHistory.shift();
+            }
+            
+            const energyCanvas = document.getElementById('energyCanvas');
+            if (!energyCanvas) return;
+            
+            const gctx = energyCanvas.getContext('2d');
+            gctx.clearRect(0, 0, energyCanvas.width, energyCanvas.height);
+            
+            if (energyHistory.length < 2) return;
+            
+            // Find min/max for scaling
+            const minE = Math.min(...energyHistory);
+            const maxE = Math.max(...energyHistory);
+            const range = maxE - minE || 1;
+            
+            // Draw grid
+            gctx.strokeStyle = 'rgba(100, 100, 120, 0.2)';
+            gctx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const y = (energyCanvas.height * i) / 4;
+                gctx.beginPath();
+                gctx.moveTo(0, y);
+                gctx.lineTo(energyCanvas.width, y);
+                gctx.stroke();
+            }
+            
+            // Draw energy line
+            gctx.strokeStyle = '#4ECDC4';
+            gctx.lineWidth = 2;
+            gctx.beginPath();
+            
+            for (let i = 0; i < energyHistory.length; i++) {
+                const x = (i / maxHistoryLength) * energyCanvas.width;
+                const normalized = (energyHistory[i] - minE) / range;
+                const y = energyCanvas.height - (normalized * energyCanvas.height);
+                
+                if (i === 0) {
+                    gctx.moveTo(x, y);
+                } else {
+                    gctx.lineTo(x, y);
+                }
+            }
+            gctx.stroke();
+            
+            // Draw labels
+            gctx.fillStyle = '#8a8aa5';
+            gctx.font = '10px monospace';
+            gctx.fillText('E: ' + energy.toFixed(2), 5, 12);
+        }
+        
         function rgbaToStyle(rgba) {
             const r = (rgba >> 24) & 0xFF;
             const g = (rgba >> 16) & 0xFF;
@@ -435,23 +861,60 @@
         }
         
         function drawBody(x, y, radius, color) {
+            // Extract RGBA components
+            const r = (color >> 24) & 0xFF;
+            const g = (color >> 16) & 0xFF;
+            const b = (color >> 8) & 0xFF;
+            const a = (color & 0xFF) / 255;
+            
+            // Draw atmospheric glow
+            const glowGradient = ctx.createRadialGradient(x, y, radius * 0.8, x, y, radius * 2.5);
+            glowGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.3)`);
+            glowGradient.addColorStop(0.4, `rgba(${r}, ${g}, ${b}, 0.15)`);
+            glowGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+            
             ctx.beginPath();
-            ctx.arc(x, y, radius, 0, Math.PI * 2);
-            ctx.fillStyle = rgbaToStyle(color);
+            ctx.arc(x, y, radius * 2.5, 0, Math.PI * 2);
+            ctx.fillStyle = glowGradient;
             ctx.fill();
             
-            // Add glow effect
-            const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius * 2);
-            gradient.addColorStop(0, rgbaToStyle(color));
-            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-            ctx.fillStyle = gradient;
+            // Draw main planet body with lighting
+            const lightOffsetX = -radius * 0.3;
+            const lightOffsetY = -radius * 0.3;
+            const planetGradient = ctx.createRadialGradient(
+                x + lightOffsetX, y + lightOffsetY, radius * 0.1,
+                x, y, radius
+            );
+            
+            // Bright highlight
+            planetGradient.addColorStop(0, `rgba(${Math.min(255, r + 80)}, ${Math.min(255, g + 80)}, ${Math.min(255, b + 80)}, ${a})`);
+            // Main color
+            planetGradient.addColorStop(0.4, `rgba(${r}, ${g}, ${b}, ${a})`);
+            // Darker edge for sphere effect
+            planetGradient.addColorStop(1, `rgba(${Math.max(0, r - 50)}, ${Math.max(0, g - 50)}, ${Math.max(0, b - 50)}, ${a})`);
+            
             ctx.beginPath();
-            ctx.arc(x, y, radius * 2, 0, Math.PI * 2);
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = planetGradient;
+            ctx.fill();
+            
+            // Add subtle rim lighting on the shadow side
+            const rimGradient = ctx.createRadialGradient(
+                x - lightOffsetX * 2, y - lightOffsetY * 2, radius * 0.3,
+                x, y, radius * 1.2
+            );
+            rimGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0)`);
+            rimGradient.addColorStop(0.8, `rgba(${Math.min(255, r + 30)}, ${Math.min(255, g + 30)}, ${Math.min(255, b + 30)}, 0.2)`);
+            rimGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+            
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = rimGradient;
             ctx.fill();
         }
         
         function drawVelocityVector(x, y, vx, vy, color) {
-            const scale = 10; // Scale factor for visibility
+            const scale = 10;
             const endX = x + vx * scale;
             const endY = y + vy * scale;
             
@@ -462,7 +925,6 @@
             ctx.lineWidth = 2;
             ctx.stroke();
             
-            // Arrow head
             const angle = Math.atan2(vy, vx);
             const headLen = 8;
             ctx.beginPath();
@@ -482,7 +944,6 @@
             ctx.lineWidth = 2;
             ctx.stroke();
             
-            // Cross marker
             ctx.beginPath();
             ctx.moveTo(cmX - 10, cmY);
             ctx.lineTo(cmX + 10, cmY);
@@ -505,54 +966,144 @@
             document.getElementById('simTime').textContent = simulationTime.toFixed(2) + 's';
             document.getElementById('bodyCount').textContent = Module._getBodyCount();
             document.getElementById('totalEnergy').textContent = Module._getTotalEnergy().toFixed(2);
-            document.getElementById('momentumX').textContent = Module._getMomentumX().toFixed(2);
-            document.getElementById('momentumY').textContent = Module._getMomentumY().toFixed(2);
+            
+            // Calculate momentum magnitude
+            const momX = Module._getMomentumX();
+            const momY = Module._getMomentumY();
+            const momMag = Math.sqrt(momX * momX + momY * momY);
+            document.getElementById('momentumMag').textContent = momMag.toFixed(3);
+            
+            document.getElementById('angularMomentum').textContent = Module._getAngularMomentum().toFixed(2);
+            
+            // Conservation drift monitoring
+            const energyDrift = Module._getEnergyDrift() * 100;  // Convert to percentage
+            const momentumDrift = Module._getMomentumDrift() * 100;
+            
+            const energyDriftEl = document.getElementById('energyDrift');
+            energyDriftEl.textContent = energyDrift.toFixed(4) + '%';
+            // Color code: green if < 0.1%, yellow if < 1%, red if >= 1%
+            if (energyDrift < 0.1) {
+                energyDriftEl.style.color = '#4ade80';
+            } else if (energyDrift < 1.0) {
+                energyDriftEl.style.color = '#fbbf24';
+            } else {
+                energyDriftEl.style.color = '#f87171';
+            }
+            
+            const momentumDriftEl = document.getElementById('momentumDrift');
+            momentumDriftEl.textContent = momentumDrift.toFixed(4) + '%';
+            if (momentumDrift < 0.1) {
+                momentumDriftEl.style.color = '#4ade80';
+            } else if (momentumDrift < 1.0) {
+                momentumDriftEl.style.color = '#fbbf24';
+            } else {
+                momentumDriftEl.style.color = '#f87171';
+            }
         }
         
         function animate() {
             if (isRunning) {
-                // Update physics (multiple steps per frame for stability)
                 for (let i = 0; i < 5; i++) {
                     Module._update();
                     simulationTime += Module._getTimeStep();
                 }
+            }
+            
+            // Trail effect
+            if (showTrails) {
+                ctx.fillStyle = `rgba(0, 0, 0, ${trailOpacity})`;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            } else {
+                ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            
+            // Apply camera transform
+            ctx.save();
+            ctx.translate(cameraX, cameraY);
+            ctx.scale(cameraZoom, cameraZoom);
+            
+            // Draw center of mass
+            if (showCenterOfMass) {
+                const cmX = Module._getCenterOfMassX();
+                const cmY = Module._getCenterOfMassY();
+                drawCenterOfMass(cmX, cmY);
+            }
+            
+            // Draw bodies and velocity vectors
+            const bodyCount = Module._getBodyCount();
+            for (let i = 0; i < bodyCount; i++) {
+                const x = Module._getBodyX(i);
+                const y = Module._getBodyY(i);
+                const radius = Module._getBodyRadius(i);
+                const color = Module._getBodyColor(i);
                 
-                // Clear canvas with trail effect
-                if (showTrails) {
-                    ctx.fillStyle = `rgba(0, 0, 0, ${trailOpacity})`;
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                } else {
-                    ctx.fillStyle = 'rgba(0, 0, 0, 1)';
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                drawBody(x, y, radius, color);
+                
+                // Highlight selected body
+                if (i === selectedBodyIndex) {
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius * 1.5, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
                 }
                 
-                // Draw center of mass
-                if (showCenterOfMass) {
-                    const cmX = Module._getCenterOfMassX();
-                    const cmY = Module._getCenterOfMassY();
-                    drawCenterOfMass(cmX, cmY);
+                if (showVelocityVectors) {
+                    const vx = Module._getBodyVX(i);
+                    const vy = Module._getBodyVY(i);
+                    drawVelocityVector(x, y, vx, vy, color);
                 }
+            }
+            
+            // Draw creation indicator
+            if (isCreatingBody) {
+                const rect = canvas.getBoundingClientRect();
+                // Use stored mouse position from event handlers
+                const dx = (lastMouseX || creationStartX) - creationStartX;
+                const dy = (lastMouseY || creationStartY) - creationStartY;
                 
-                // Draw all bodies
-                const bodyCount = Module._getBodyCount();
-                for (let i = 0; i < bodyCount; i++) {
-                    const x = Module._getBodyX(i);
-                    const y = Module._getBodyY(i);
-                    const radius = Module._getBodyRadius(i);
-                    const color = Module._getBodyColor(i);
+                // Draw creation circle
+                ctx.beginPath();
+                ctx.arc(creationStartX, creationStartY, 10, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(100, 200, 255, 0.8)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                if (dx !== 0 || dy !== 0) {
+                    // Draw velocity arrow
+                    ctx.beginPath();
+                    ctx.moveTo(creationStartX, creationStartY);
+                    ctx.lineTo(creationStartX + dx, creationStartY + dy);
+                    ctx.strokeStyle = 'rgba(100, 200, 255, 0.6)';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
                     
-                    drawBody(x, y, radius, color);
-                    
-                    // Draw velocity vectors
-                    if (showVelocityVectors) {
-                        const vx = Module._getBodyVX(i);
-                        const vy = Module._getBodyVY(i);
-                        drawVelocityVector(x, y, vx, vy, color);
-                    }
+                    // Draw arrowhead
+                    const angle = Math.atan2(dy, dx);
+                    const headLen = 10;
+                    const endX = creationStartX + dx;
+                    const endY = creationStartY + dy;
+                    ctx.beginPath();
+                    ctx.moveTo(endX, endY);
+                    ctx.lineTo(endX - headLen * Math.cos(angle - Math.PI/6), 
+                              endY - headLen * Math.sin(angle - Math.PI/6));
+                    ctx.moveTo(endX, endY);
+                    ctx.lineTo(endX - headLen * Math.cos(angle + Math.PI/6), 
+                              endY - headLen * Math.sin(angle + Math.PI/6));
+                    ctx.stroke();
                 }
-                
-                frameCount++;
+            }
+            
+            ctx.restore();
+            
+            // Update stats and energy graph periodically
+            frameCount++;
+            if (frameCount % 10 === 0) {
                 updateStats();
+                updateEnergyGraph();
             }
             
             requestAnimationFrame(animate);
@@ -563,6 +1114,146 @@
             lastTime = Date.now();
             animate();
         }
+        
+        // Mouse/Touch interaction handlers
+        canvas.addEventListener('mousedown', handleMouseDown);
+        canvas.addEventListener('mousemove', handleMouseMove);
+        canvas.addEventListener('mouseup', handleMouseUp);
+        canvas.addEventListener('wheel', handleWheel);
+        
+        function handleMouseDown(e) {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            if (e.shiftKey) {
+                // Shift + Click: Create new body (in world coordinates)
+                isCreatingBody = true;
+                const worldX = (mouseX - cameraX) / cameraZoom;
+                const worldY = (mouseY - cameraY) / cameraZoom;
+                creationStartX = worldX;
+                creationStartY = worldY;
+                lastMouseX = mouseX;
+                lastMouseY = mouseY;
+            } else if (e.ctrlKey || e.metaKey) {
+                // Ctrl/Cmd + Drag: Pan camera
+                isDraggingCamera = true;
+                lastMouseX = mouseX;
+                lastMouseY = mouseY;
+                canvas.style.cursor = 'grabbing';
+            } else {
+                // Regular click: Select/drag body
+                const worldX = (mouseX - cameraX) / cameraZoom;
+                const worldY = (mouseY - cameraY) / cameraZoom;
+                const bodyIndex = Module._findBodyAtPosition(worldX, worldY);
+                if (bodyIndex >= 0) {
+                    draggedBodyIndex = bodyIndex;
+                    isDraggingBody = true;
+                    selectedBodyIndex = bodyIndex;
+                    canvas.style.cursor = 'move';
+                    updateBodyInfo(bodyIndex);
+                } else {
+                    selectedBodyIndex = -1;
+                    hideBodyInfo();
+                }
+            }
+        }
+        
+        function handleMouseMove(e) {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            // Store for creation indicator
+            if (isCreatingBody) {
+                lastMouseX = mouseX;
+                lastMouseY = mouseY;
+            }
+            
+            if (isDraggingCamera) {
+                cameraX += mouseX - lastMouseX;
+                cameraY += mouseY - lastMouseY;
+                lastMouseX = mouseX;
+                lastMouseY = mouseY;
+            } else if (isDraggingBody && draggedBodyIndex >= 0) {
+                // Transform mouse coordinates by camera
+                const worldX = (mouseX - cameraX) / cameraZoom;
+                const worldY = (mouseY - cameraY) / cameraZoom;
+                Module._setBodyPosition(draggedBodyIndex, worldX, worldY);
+                updateBodyInfo(draggedBodyIndex);
+            } else {
+                // Hover detection
+                const worldX = (mouseX - cameraX) / cameraZoom;
+                const worldY = (mouseY - cameraY) / cameraZoom;
+                const bodyIndex = Module._findBodyAtPosition(worldX, worldY);
+                canvas.style.cursor = bodyIndex >= 0 ? 'pointer' : 'default';
+            }
+        }
+        
+        function handleMouseUp(e) {
+            if (isCreatingBody) {
+                const rect = canvas.getBoundingClientRect();
+                const endX = e.clientX - rect.left;
+                const endY = e.clientY - rect.top;
+                
+                // Convert to world coordinates
+                const worldEndX = (endX - cameraX) / cameraZoom;
+                const worldEndY = (endY - cameraY) / cameraZoom;
+                
+                const vx = (worldEndX - creationStartX) * 0.02;
+                const vy = (worldEndY - creationStartY) * 0.02;
+                
+                // Random planet-like colors
+                const colors = [
+                    0x3498DBFF,  // Earth blue
+                    0xE74C3CFF,  // Mars red
+                    0xF39C12FF,  // Venus yellow
+                    0x9B59B6FF,  // Neptune purple
+                    0x1ABC9CFF,  // Uranus turquoise
+                    0xE67E22FF,  // Jupiter orange
+                    0xF4D03FFF,  // Saturn yellow
+                    0xA2D5F2FF   // Ice world blue
+                ];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                
+                Module._addBody(creationStartX, creationStartY, vx, vy, 50.0, 10.0, color);
+                isCreatingBody = false;
+            }
+            
+            if (isDraggingBody) {
+                Module._saveState();
+            }
+            
+            isDraggingBody = false;
+            isDraggingCamera = false;
+            draggedBodyIndex = -1;
+            canvas.style.cursor = 'default';
+        }
+        
+        function handleWheel(e) {
+            e.preventDefault();
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+            cameraZoom *= zoomFactor;
+            cameraZoom = Math.max(0.5, Math.min(cameraZoom, 3.0));
+        }
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === ' ') {
+                e.preventDefault();
+                toggleSimulation();
+            } else if (e.key === 'r' || e.key === 'R') {
+                resetSimulation();
+            } else if (e.key === 'Delete' && selectedBodyIndex >= 0) {
+                Module._removeBody(selectedBodyIndex);
+                selectedBodyIndex = -1;
+                hideBodyInfo();
+            } else if (e.key === 't' || e.key === 'T') {
+                document.getElementById('trailCheck').click();
+            } else if (e.key === 'v' || e.key === 'V') {
+                document.getElementById('velocityCheck').click();
+            }
+        });
     </script>
 </body>
 </html>
