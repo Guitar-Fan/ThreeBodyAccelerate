@@ -9,6 +9,20 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+// NASA Game Mode: Mission states (must be declared before global variables)
+enum GameMode {
+    GAME_MODE_DISABLED,        // Academic simulation mode (default)
+    GAME_MODE_ACTIVE          // NASA asteroid defense game
+};
+
+enum MissionState {
+    MISSION_SETUP,             // Planning phase, can place spacecraft
+    MISSION_RUNNING,           // Simulation in progress
+    MISSION_SUCCESS,           // Asteroid deflected successfully
+    MISSION_FAILURE,           // Asteroid hit Earth or mission failed
+    MISSION_WARNING            // Close approach warning
+};
+
 // Structure to represent a celestial body
 struct Body {
     double x, y, z;      // Position (3D as per PDF requirement)
@@ -54,6 +68,24 @@ double rkfTolerance = 1e-6;     // Error tolerance for adaptive stepping
 double minDt = 0.001;           // Minimum time step
 double maxDt = 0.1;             // Maximum time step
 
+// NASA Game Mode parameters
+GameMode gameMode = GAME_MODE_DISABLED;
+MissionState missionState = MISSION_SETUP;
+int earthBodyIndex = -1;        // Index of Earth in bodies array
+int asteroidBodyIndex = -1;     // Index of threat asteroid
+int spacecraftBodyIndex = -1;   // Index of player's deflection spacecraft
+double earthRadius = 6371.0;    // Earth radius in km (scaled for display)
+double safetyMargin = 10.0;     // Required miss distance (Earth radii)
+double threatRadius = 50.0;     // Collision detection radius
+double missionTime = 0.0;       // Elapsed mission time
+double timeLimit = 1000.0;      // Mission time limit
+double closestApproach = 1e10;  // Closest distance achieved
+double impactProbability = 0.0; // Calculated collision probability
+bool trajectoryPredicted = false;
+int missionScore = 0;
+double deltaVBudget = 5.0;      // Available delta-v for spacecraft (km/s)
+double deltaVUsed = 0.0;        // Delta-v consumed
+
 // System properties (3D vectors as per PDF Section 2.2)
 double totalEnergy = 0.0;
 double totalMomentumX = 0.0;
@@ -91,6 +123,7 @@ enum PresetType {
     PRESET_PYTHAGOREAN,        // 3-body Pythagorean problem
     PRESET_LAGRANGE,           // 3-body Lagrange equilateral triangle
     PRESET_SOLAR_SYSTEM,       // N-body (beyond three-body scope)
+    PRESET_NASA_ASTEROID_DEFENSE,  // NASA game mode: Earth + asteroid + deflector
     PRESET_CUSTOM
 };
 
@@ -445,6 +478,96 @@ void loadSolarSystem() {
         0x5DADE2FF,      // Neptune blue
         0.0, 0.0
     });*/
+}
+
+/**
+ * NASA GAME MODE: Asteroid Defense Scenario
+ * Earth + incoming asteroid + player spacecraft
+ * Realistic three-body problem with mission objectives
+ */
+void loadNASAAsteroidDefense(int difficulty) {
+    bodies.clear();
+    gameMode = GAME_MODE_ACTIVE;
+    missionState = MISSION_SETUP;
+    missionTime = 0.0;
+    closestApproach = 1e10;
+    deltaVUsed = 0.0;
+    missionScore = 0;
+    
+    // Earth at center (mass = 1.0 Earth mass, scaled)
+    double earthMass = 5.972;  // Scaled Earth mass
+    bodies.push_back({
+        400.0, 300.0, 0.0,     // x, y, z (center of screen)
+        0.0, 0.0, 0.0,         // vx, vy, vz (stationary for simplicity)
+        0.0, 0.0, 0.0,         // ax, ay, az
+        earthMass,             // mass
+        15.0,                  // radius (visual)
+        0x4A90E2FF,            // Earth blue
+        0.0, 0.0
+    });
+    earthBodyIndex = 0;
+    
+    // Incoming asteroid - difficulty determines speed and angle
+    double asteroidDistance = 300.0;  // Starting distance
+    double asteroidSpeed = 0.0;
+    double asteroidAngle = 0.0;
+    double asteroidMass = 0.001;  // Small compared to Earth
+    
+    switch(difficulty) {
+        case 0: // Easy - slow, direct approach
+            asteroidSpeed = 0.5;
+            asteroidAngle = 0.0;  // Straight from right
+            timeLimit = 800.0;
+            threatRadius = 30.0;
+            deltaVBudget = 3.0;
+            break;
+        case 1: // Medium - faster, angled
+            asteroidSpeed = 1.2;
+            asteroidAngle = M_PI / 6.0;  // 30 degree angle
+            timeLimit = 500.0;
+            threatRadius = 25.0;
+            deltaVBudget = 2.0;
+            break;
+        case 2: // Hard - fast, sharp angle
+            asteroidSpeed = 2.0;
+            asteroidAngle = M_PI / 4.0;  // 45 degree angle
+            timeLimit = 300.0;
+            threatRadius = 20.0;
+            deltaVBudget = 1.5;
+            break;
+        case 3: // Expert - very fast, near miss trajectory
+            asteroidSpeed = 3.0;
+            asteroidAngle = M_PI / 3.0;  // 60 degree angle
+            timeLimit = 200.0;
+            threatRadius = 18.0;
+            deltaVBudget = 1.0;
+            asteroidMass = 0.002;  // Heavier asteroid
+            break;
+    }
+    
+    // Position asteroid at distance, approaching Earth
+    double asteroidX = 400.0 + asteroidDistance;
+    double asteroidY = 300.0;
+    double asteroidVx = -asteroidSpeed * cos(asteroidAngle);
+    double asteroidVy = -asteroidSpeed * sin(asteroidAngle);
+    
+    bodies.push_back({
+        asteroidX, asteroidY, 0.0,
+        asteroidVx, asteroidVy, 0.0,
+        0.0, 0.0, 0.0,
+        asteroidMass,
+        5.0,                   // Small visual size
+        0xA0522DFF,            // Brown asteroid
+        0.0, 0.0
+    });
+    asteroidBodyIndex = 1;
+    
+    // No spacecraft yet - player will deploy it
+    spacecraftBodyIndex = -1;
+    
+    printf("NASA Asteroid Defense Mission Started - Difficulty: %d\\n", difficulty);
+    printf("Objective: Deflect asteroid using gravity or kinetic impact\\n");
+    printf("Delta-V Budget: %.2f km/s, Time Limit: %.1f units\\n", deltaVBudget, timeLimit);
 }
 
 // Default initialization
@@ -1018,6 +1141,62 @@ void calculateSystemProperties() {
     }
 }
 
+/**
+ * NASA GAME MODE: Threat Assessment and Mission Evaluation
+ * Monitors asteroid trajectory and evaluates mission status
+ */
+void evaluateMissionStatus() {
+    if (gameMode != GAME_MODE_ACTIVE || missionState == MISSION_SUCCESS || missionState == MISSION_FAILURE) {
+        return;
+    }
+    
+    // Update mission time
+    missionTime += dt * timeScale;
+    
+    // Check if bodies still exist
+    if (earthBodyIndex < 0 || earthBodyIndex >= bodies.size() || 
+        asteroidBodyIndex < 0 || asteroidBodyIndex >= bodies.size()) {
+        return;
+    }
+    
+    // Calculate distance between Earth and asteroid
+    double dx = bodies[asteroidBodyIndex].x - bodies[earthBodyIndex].x;
+    double dy = bodies[asteroidBodyIndex].y - bodies[earthBodyIndex].y;
+    double dz = bodies[asteroidBodyIndex].z - bodies[earthBodyIndex].z;
+    double distance = sqrt(dx * dx + dy * dy + dz * dz);
+    
+    // Track closest approach
+    if (distance < closestApproach) {
+        closestApproach = distance;
+    }
+    
+    // Check for collision
+    if (distance < threatRadius) {
+        missionState = MISSION_FAILURE;
+        printf("MISSION FAILED: Asteroid impact! Distance: %.2f km\n", distance);
+        return;
+    }
+    
+    // Check for close approach warning
+    if (distance < threatRadius * 3.0 && missionState == MISSION_RUNNING) {
+        missionState = MISSION_WARNING;
+    }
+    
+    // Check time limit
+    if (missionTime > timeLimit) {
+        if (closestApproach > threatRadius * safetyMargin) {
+            missionState = MISSION_SUCCESS;
+            missionScore = (int)(1000.0 * (closestApproach / (threatRadius * safetyMargin)) * 
+                                 (1.0 - deltaVUsed / deltaVBudget) * 
+                                 (1.0 - missionTime / timeLimit));
+            printf("MISSION SUCCESS! Closest approach: %.2f km, Score: %d\n", closestApproach, missionScore);
+        } else {
+            missionState = MISSION_FAILURE;
+            printf("MISSION FAILED: Asteroid too close (%.2f km)\n", closestApproach);
+        }
+    }
+}
+
 void updateBodies() {
     switch (currentMethod) {
         case METHOD_EULER:
@@ -1034,6 +1213,7 @@ void updateBodies() {
             break;
     }
     calculateSystemProperties();
+    evaluateMissionStatus();
 }
 
 
@@ -1219,6 +1399,9 @@ extern "C" {
     
     EMSCRIPTEN_KEEPALIVE
     void loadPreset(int presetType) {
+        // Disable game mode for academic presets
+        gameMode = GAME_MODE_DISABLED;
+        
         switch (presetType) {
             case PRESET_FIGURE_EIGHT:
                 loadFigureEight();
@@ -1241,6 +1424,9 @@ extern "C" {
             case PRESET_SOLAR_SYSTEM:
                 loadSolarSystem();
                 break;
+            case PRESET_NASA_ASTEROID_DEFENSE:
+                loadNASAAsteroidDefense(1);  // Default medium difficulty
+                return;  // Skip normal initialization for game mode
         }
         initialBodies = bodies;
         calculateSystemProperties();
@@ -1440,6 +1626,123 @@ extern "C" {
     EMSCRIPTEN_KEEPALIVE
     double getAngularMomentumDrift() {
         return angularMomentumDrift;
+    }
+    
+    // NASA Game Mode Functions
+    EMSCRIPTEN_KEEPALIVE
+    void startNASAMission(int difficulty) {
+        loadNASAAsteroidDefense(difficulty);
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    int getGameMode() {
+        return static_cast<int>(gameMode);
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    int getMissionState() {
+        return static_cast<int>(missionState);
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    void deploySpacecraft(double x, double y, double vx, double vy) {
+        if (gameMode != GAME_MODE_ACTIVE || missionState != MISSION_SETUP) {
+            printf("Cannot deploy spacecraft - wrong game state\n");
+            return;
+        }
+        
+        // Calculate delta-v required
+        double deltaV = sqrt(vx * vx + vy * vy);
+        if (deltaV > deltaVBudget) {
+            printf("Insufficient delta-V budget! Required: %.2f, Available: %.2f\n", deltaV, deltaVBudget);
+            return;
+        }
+        
+        // Deploy spacecraft (kinetic impactor or gravity tractor)
+        double spacecraftMass = 0.0001;  // Small mass
+        bodies.push_back({
+            x, y, 0.0,
+            vx, vy, 0.0,
+            0.0, 0.0, 0.0,
+            spacecraftMass,
+            3.0,  // Small visual size
+            0xFFFFFFFF,  // White spacecraft
+            0.0, 0.0
+        });
+        spacecraftBodyIndex = bodies.size() - 1;
+        deltaVUsed = deltaV;
+        
+        // Start mission
+        missionState = MISSION_RUNNING;
+        printf("Spacecraft deployed! Delta-V used: %.2f km/s\n", deltaVUsed);
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    double getThreatDistance() {
+        if (gameMode != GAME_MODE_ACTIVE || earthBodyIndex < 0 || asteroidBodyIndex < 0 ||
+            earthBodyIndex >= bodies.size() || asteroidBodyIndex >= bodies.size()) {
+            return -1.0;
+        }
+        
+        double dx = bodies[asteroidBodyIndex].x - bodies[earthBodyIndex].x;
+        double dy = bodies[asteroidBodyIndex].y - bodies[earthBodyIndex].y;
+        double dz = bodies[asteroidBodyIndex].z - bodies[earthBodyIndex].z;
+        return sqrt(dx * dx + dy * dy + dz * dz);
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    double getMissionTime() {
+        return missionTime;
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    double getTimeLimit() {
+        return timeLimit;
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    double getClosestApproach() {
+        return closestApproach;
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    double getDeltaVBudget() {
+        return deltaVBudget;
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    double getDeltaVUsed() {
+        return deltaVUsed;
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    int getMissionScore() {
+        return missionScore;
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    double getThreatRadius() {
+        return threatRadius;
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    double getSafetyMargin() {
+        return safetyMargin;
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    int getEarthIndex() {
+        return earthBodyIndex;
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    int getAsteroidIndex() {
+        return asteroidBodyIndex;
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    int getSpacecraftIndex() {
+        return spacecraftBodyIndex;
     }
     
     EMSCRIPTEN_KEEPALIVE
