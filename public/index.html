@@ -401,13 +401,6 @@
 </head>
 <body>
     <div id="sidebar">
-        <h2>Mode Selection</h2>
-        
-        <div class="control-group">
-            <button class="primary" onclick="switchToAcademicMode()" id="academicModeBtn">Academic Mode</button>
-            <button onclick="switchToGameMode()" id="gameModeBtn">🎮 NASA Game Mode</button>
-        </div>
-        
         <h2>Simulation Control</h2>
         
         <div class="control-group">
@@ -416,7 +409,7 @@
         </div>
         
         <h2>Initial Configurations</h2>
-        <div class="preset-grid" id="academicPresets">
+        <div class="preset-grid">
             <button onclick="loadPreset(0)">Figure-8</button>
             <button onclick="loadPreset(1)">Stable</button>
             <button onclick="loadPreset(2)">Chaotic</button>
@@ -425,16 +418,7 @@
             <button onclick="loadPreset(5)" style="grid-column: 1 / -1; background: linear-gradient(180deg, #3a4a68 0%, #2a3a56 100%);">🌌 Solar System</button>
         </div>
         
-        <div class="preset-grid" id="gameMissionSelect" style="display: none;">
-            <button onclick="startMission(0)" style="background: linear-gradient(180deg, #2a5a2a 0%, #1a4a1a 100%);">Easy Mission</button>
-            <button onclick="startMission(1)" style="background: linear-gradient(180deg, #5a5a2a 0%, #4a4a1a 100%);">Medium Mission</button>
-            <button onclick="startMission(2)" style="background: linear-gradient(180deg, #5a3a2a 0%, #4a2a1a 100%);">Hard Mission</button>
-            <button onclick="startMission(3)" style="background: linear-gradient(180deg, #5a2a2a 0%, #4a1a1a 100%);">Expert Mission</button>
-        </div>
-        
         <h2>Physics Parameters</h2>
-        
-        <div id="academicControls">
         
         <div class="control-group">
             <label>Gravitational Constant: <span id="gValue">1.00</span></label>
@@ -558,53 +542,6 @@
             <div class="math-formula">• Numerical: Verlet (symplectic) or RK4</div>
             <div class="math-formula">• Softening ε prevents r→0 singularities</div>
         </div>
-        
-        </div><!-- End academic controls -->
-        
-        <div id="gameControls" style="display: none;">
-            <h2>Mission Status</h2>
-            <div id="gameStats">
-                <div class="stat-row">
-                    <span class="stat-label">Mission</span>
-                    <span class="stat-value" id="missionStatus">Not Started</span>
-                </div>
-                <div class="stat-row">
-                    <span class="stat-label">Threat Distance</span>
-                    <span class="stat-value" id="threatDistance">--</span>
-                </div>
-                <div class="stat-row">
-                    <span class="stat-label">Intercept Distance</span>
-                    <span class="stat-value" id="interceptDistance">--</span>
-                </div>
-                <div class="stat-row">
-                    <span class="stat-label">Mission Time</span>
-                    <span class="stat-value" id="missionTime">0.0 days</span>
-                </div>
-                <div class="stat-row">
-                    <span class="stat-label">Score</span>
-                    <span class="stat-value" id="missionScore">0</span>
-                </div>
-                <div class="stat-row">
-                    <span class="stat-label">Delta-V Used</span>
-                    <span class="stat-value" id="deltaVUsed">0 m/s</span>
-                </div>
-            </div>
-            
-            <h2>Spacecraft Deployment</h2>
-            <div id="deploymentInfo" style="background: rgba(20, 20, 30, 0.5); border: 1px solid rgba(100, 100, 120, 0.1); border-radius: 4px; padding: 12px; font-size: 11px; color: #8a8aa0; margin: 15px 0; line-height: 1.6;">
-                <strong>Deployment Instructions:</strong>
-                <div style="margin: 5px 0;">🎯 Click to deploy spacecraft from Earth orbit</div>
-                <div style="margin: 5px 0;">🚀 Drag to set velocity vector</div>
-                <div style="margin: 5px 0;">⚡ Longer drag = higher delta-V</div>
-                <div style="margin: 5px 0;">🎯 Goal: Deflect asteroid before it hits Earth</div>
-                <div style="margin: 5px 0; color: #ff6b6b;">⚠️ Earth radius: Safe distance > 2.0</div>
-            </div>
-            
-            <div class="control-group">
-                <button onclick="toggleDeployMode()" id="deployBtn" style="background: linear-gradient(180deg, #2a5a5a 0%, #1a4a4a 100%);">Ready to Deploy</button>
-                <button onclick="abortMission()" style="background: linear-gradient(180deg, #5a2a2a 0%, #3a1a1a 100%);">Abort Mission</button>
-            </div>
-        </div>
     </div>
     
     <div id="mainContent">
@@ -630,38 +567,6 @@
             <!-- Energy graph -->
             <div id="energyGraph">
                 <canvas id="energyCanvas" width="230" height="100"></canvas>
-            </div>
-            
-            <!-- Game Mode HUD Overlay -->
-            <div id="gameHUD" style="display: none;">
-                <div style="position: absolute; top: 20px; left: 20px; background: rgba(22, 22, 35, 0.9); border: 1px solid rgba(100, 100, 120, 0.3); border-radius: 4px; padding: 15px; min-width: 250px;">
-                    <div style="font-size: 18px; font-weight: bold; color: #f0f0f5; margin-bottom: 10px;">🛡️ NASA Asteroid Defense</div>
-                    <div style="font-size: 12px; color: #8a8aa5; margin-bottom: 15px;" id="hudMissionName">Mission Loading...</div>
-                    
-                    <div style="margin: 8px 0; display: flex; justify-content: space-between;">
-                        <span style="color: #8a8aa5; font-size: 11px;">Status:</span>
-                        <span style="color: #d0d0e5; font-size: 11px; font-weight: bold;" id="hudStatus">STANDBY</span>
-                    </div>
-                    <div style="margin: 8px 0; display: flex; justify-content: space-between;">
-                        <span style="color: #8a8aa5; font-size: 11px;">Threat:</span>
-                        <span style="color: #ff6b6b; font-size: 11px; font-weight: bold;" id="hudThreat">--</span>
-                    </div>
-                    <div style="margin: 8px 0; display: flex; justify-content: space-between;">
-                        <span style="color: #8a8aa5; font-size: 11px;">Time:</span>
-                        <span style="color: #d0d0e5; font-size: 11px; font-family: monospace;" id="hudTime">0.0 days</span>
-                    </div>
-                    <div style="margin: 8px 0; display: flex; justify-content: space-between;">
-                        <span style="color: #8a8aa5; font-size: 11px;">Score:</span>
-                        <span style="color: #4ade80; font-size: 11px; font-weight: bold;" id="hudScore">0</span>
-                    </div>
-                    
-                    <div id="hudMessage" style="margin-top: 15px; padding: 10px; background: rgba(30, 30, 45, 0.6); border-radius: 3px; font-size: 11px; color: #b0b0c0; border-left: 3px solid #4a5568;">
-                        Select mission difficulty to begin
-                    </div>
-                </div>
-                
-                <!-- Trajectory prediction line -->
-                <canvas id="trajectoryCanvas" width="900" height="700" style="position: absolute; top: 0; left: 0; pointer-events: none;"></canvas>
             </div>
         </div>
     </div>
@@ -721,8 +626,6 @@
     <script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-        const trajectoryCanvas = document.getElementById('trajectoryCanvas');
-        const trajCtx = trajectoryCanvas ? trajectoryCanvas.getContext('2d') : null;
         
         let isRunning = true;
         let showTrails = true;
@@ -732,23 +635,6 @@
         let frameCount = 0;
         let lastTime = Date.now();
         let simulationTime = 0;
-        
-        // Game mode state
-        let gameMode = false;  // false = academic, true = game
-        let missionActive = false;
-        let deployMode = false;
-        let deployStartX = 0;
-        let deployStartY = 0;
-        let currentDifficulty = 0;
-        
-        // Mission state enum (must match C++)
-        const MissionState = {
-            SETUP: 0,
-            SPACECRAFT_DEPLOYED: 1,
-            MONITORING: 2,
-            SUCCESS: 3,
-            FAILURE: 4
-        };
         
         // Camera controls
         let cameraX = 0;
@@ -773,194 +659,6 @@
         function toggleSimulation() {
             isRunning = !isRunning;
             document.getElementById('pauseBtn').textContent = isRunning ? 'Pause' : 'Resume';
-        }
-        
-        function switchToAcademicMode() {
-            gameMode = false;
-            missionActive = false;
-            deployMode = false;
-            
-            // Update UI visibility
-            document.getElementById('academicPresets').style.display = 'grid';
-            document.getElementById('gameMissionSelect').style.display = 'none';
-            document.getElementById('academicControls').style.display = 'block';
-            document.getElementById('gameControls').style.display = 'none';
-            document.getElementById('gameHUD').style.display = 'none';
-            document.getElementById('instructions').style.display = 'block';
-            
-            // Update button states
-            document.getElementById('academicModeBtn').className = 'primary';
-            document.getElementById('gameModeBtn').className = '';
-            
-            // Switch to academic mode in C++
-            Module._setGameMode(0);  // 0 = ACADEMIC
-            resetSimulation();
-        }
-        
-        function switchToGameMode() {
-            gameMode = true;
-            
-            // Update UI visibility
-            document.getElementById('academicPresets').style.display = 'none';
-            document.getElementById('gameMissionSelect').style.display = 'grid';
-            document.getElementById('academicControls').style.display = 'none';
-            document.getElementById('gameControls').style.display = 'block';
-            document.getElementById('gameHUD').style.display = 'block';
-            document.getElementById('instructions').style.display = 'none';
-            
-            // Update button states
-            document.getElementById('academicModeBtn').className = '';
-            document.getElementById('gameModeBtn').className = 'primary';
-            
-            // Switch to game mode in C++
-            Module._setGameMode(1);  // 1 = NASA_ASTEROID_DEFENSE
-            
-            // Update HUD
-            document.getElementById('hudMissionName').textContent = 'Select mission difficulty';
-            document.getElementById('hudStatus').textContent = 'STANDBY';
-            document.getElementById('hudMessage').textContent = 'Choose Easy, Medium, Hard, or Expert mission';
-        }
-        
-        function startMission(difficulty) {
-            currentDifficulty = difficulty;
-            const difficultyNames = ['EASY', 'MEDIUM', 'HARD', 'EXPERT'];
-            const difficultyColors = ['#4ade80', '#fbbf24', '#fb923c', '#f87171'];
-            
-            // Start NASA mission in C++
-            Module._startNASAMission(difficulty);
-            
-            missionActive = true;
-            simulationTime = 0;
-            
-            // Clear canvas
-            ctx.fillStyle = 'rgba(0, 0, 0, 1)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Update HUD
-            document.getElementById('hudMissionName').textContent = `Mission: ${difficultyNames[difficulty]} Asteroid Defense`;
-            document.getElementById('hudMissionName').style.color = difficultyColors[difficulty];
-            document.getElementById('hudStatus').textContent = 'AWAITING DEPLOYMENT';
-            document.getElementById('hudStatus').style.color = '#fbbf24';
-            document.getElementById('hudMessage').textContent = 'Click "Ready to Deploy" then click on canvas to launch spacecraft';
-            
-            // Update sidebar
-            document.getElementById('missionStatus').textContent = 'Active - ' + difficultyNames[difficulty];
-            document.getElementById('missionStatus').style.color = difficultyColors[difficulty];
-        }
-        
-        function toggleDeployMode() {
-            if (!missionActive) {
-                alert('Please start a mission first');
-                return;
-            }
-            
-            deployMode = !deployMode;
-            const btn = document.getElementById('deployBtn');
-            
-            if (deployMode) {
-                btn.textContent = 'Click to Deploy...';
-                btn.style.background = 'linear-gradient(180deg, #2a5a2a 0%, #1a4a1a 100%)';
-                document.getElementById('hudMessage').textContent = 'Click on canvas and drag to set spacecraft velocity';
-                canvas.style.cursor = 'crosshair';
-            } else {
-                btn.textContent = 'Ready to Deploy';
-                btn.style.background = 'linear-gradient(180deg, #2a5a5a 0%, #1a4a4a 100%)';
-                canvas.style.cursor = 'default';
-            }
-        }
-        
-        function abortMission() {
-            if (!missionActive) return;
-            
-            if (confirm('Are you sure you want to abort the mission?')) {
-                missionActive = false;
-                deployMode = false;
-                
-                document.getElementById('hudStatus').textContent = 'ABORTED';
-                document.getElementById('hudStatus').style.color = '#8a8aa5';
-                document.getElementById('hudMessage').textContent = 'Mission aborted. Select new mission to continue.';
-                
-                resetSimulation();
-            }
-        }
-        
-        function updateGameHUD() {
-            if (!gameMode || !missionActive) return;
-            
-            // Get mission state from C++
-            const missionState = Module._getMissionState();
-            const threatDist = Module._getThreatDistance();
-            const interceptDist = Module._getInterceptDistance();
-            const score = Module._getMissionScore();
-            const timeInDays = simulationTime / 86400; // Convert to days (assuming time units are seconds)
-            
-            // Update HUD elements
-            document.getElementById('hudThreat').textContent = threatDist.toFixed(3);
-            document.getElementById('hudTime').textContent = timeInDays.toFixed(2) + ' days';
-            document.getElementById('hudScore').textContent = score.toFixed(0);
-            
-            // Update sidebar stats
-            document.getElementById('threatDistance').textContent = threatDist.toFixed(3);
-            document.getElementById('interceptDistance').textContent = interceptDist >= 0 ? interceptDist.toFixed(3) : '--';
-            document.getElementById('missionTime').textContent = timeInDays.toFixed(2) + ' days';
-            document.getElementById('missionScore').textContent = score.toFixed(0);
-            
-            // Color code threat distance
-            const threatEl = document.getElementById('hudThreat');
-            if (threatDist < 2.0) {
-                threatEl.style.color = '#f87171';  // Red - danger
-            } else if (threatDist < 5.0) {
-                threatEl.style.color = '#fbbf24';  // Yellow - warning
-            } else {
-                threatEl.style.color = '#4ade80';  // Green - safe
-            }
-            
-            // Update status based on mission state
-            switch(missionState) {
-                case MissionState.SETUP:
-                    document.getElementById('hudStatus').textContent = 'SETUP';
-                    document.getElementById('hudStatus').style.color = '#8a8aa5';
-                    break;
-                case MissionState.SPACECRAFT_DEPLOYED:
-                    document.getElementById('hudStatus').textContent = 'DEPLOYED';
-                    document.getElementById('hudStatus').style.color = '#4ade80';
-                    document.getElementById('hudMessage').textContent = 'Spacecraft en route to intercept. Monitoring trajectory...';
-                    deployMode = false;
-                    document.getElementById('deployBtn').textContent = 'Spacecraft Active';
-                    document.getElementById('deployBtn').disabled = true;
-                    break;
-                case MissionState.MONITORING:
-                    document.getElementById('hudStatus').textContent = 'MONITORING';
-                    document.getElementById('hudStatus').style.color = '#3b82f6';
-                    break;
-                case MissionState.SUCCESS:
-                    document.getElementById('hudStatus').textContent = 'SUCCESS!';
-                    document.getElementById('hudStatus').style.color = '#4ade80';
-                    document.getElementById('hudMessage').textContent = `🎉 Mission accomplished! Earth saved! Score: ${score.toFixed(0)}`;
-                    document.getElementById('hudMessage').style.borderColor = '#4ade80';
-                    isRunning = false;
-                    document.getElementById('pauseBtn').textContent = 'Mission Complete';
-                    break;
-                case MissionState.FAILURE:
-                    document.getElementById('hudStatus').textContent = 'FAILURE';
-                    document.getElementById('hudStatus').style.color = '#f87171';
-                    document.getElementById('hudMessage').textContent = '💥 Mission failed! Asteroid impact! Try again?';
-                    document.getElementById('hudMessage').style.borderColor = '#f87171';
-                    isRunning = false;
-                    document.getElementById('pauseBtn').textContent = 'Mission Failed';
-                    break;
-            }
-        }
-        
-        function drawTrajectoryPrediction() {
-            if (!gameMode || !missionActive || !trajCtx) return;
-            
-            // Clear trajectory overlay
-            trajCtx.clearRect(0, 0, trajectoryCanvas.width, trajectoryCanvas.height);
-            
-            // TODO: Add trajectory prediction algorithm
-            // This would calculate future positions and draw dotted lines
-            // showing where the asteroid and spacecraft will go
         }
         
         function resetSimulation() {
@@ -1168,6 +866,9 @@
             const g = (color >> 16) & 0xFF;
             const b = (color >> 8) & 0xFF;
             const a = (color & 0xFF) / 255;
+            
+            // Ensure radius is positive and visible (minimum 5 pixels)
+            radius = Math.max(Math.abs(radius), 5);
             
             // Draw atmospheric glow
             const glowGradient = ctx.createRadialGradient(x, y, radius * 0.8, x, y, radius * 2.5);
@@ -1406,16 +1107,6 @@
             if (frameCount % 10 === 0) {
                 updateStats();
                 updateEnergyGraph();
-                
-                // Update game HUD if in game mode
-                if (gameMode && missionActive) {
-                    updateGameHUD();
-                }
-            }
-            
-            // Draw trajectory prediction in game mode
-            if (gameMode && missionActive) {
-                drawTrajectoryPrediction();
             }
             
             requestAnimationFrame(animate);
@@ -1424,10 +1115,6 @@
         function startSimulation() {
             Module._init();
             lastTime = Date.now();
-            
-            // Start in academic mode by default
-            switchToAcademicMode();
-            
             animate();
         }
         
@@ -1442,32 +1129,15 @@
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
             
-            // Game mode deployment
-            if (gameMode && deployMode) {
-                // Convert to world coordinates
+            if (e.shiftKey) {
+                // Shift + Click: Create new body (in world coordinates)
+                isCreatingBody = true;
                 const worldX = (mouseX - cameraX) / cameraZoom;
                 const worldY = (mouseY - cameraY) / cameraZoom;
-                deployStartX = worldX;
-                deployStartY = worldY;
-                isCreatingBody = true;  // Reuse creation indicator
                 creationStartX = worldX;
                 creationStartY = worldY;
                 lastMouseX = mouseX;
                 lastMouseY = mouseY;
-                return;
-            }
-            
-            if (e.shiftKey) {
-                // Shift + Click: Create new body (in world coordinates) - academic mode only
-                if (!gameMode) {
-                    isCreatingBody = true;
-                    const worldX = (mouseX - cameraX) / cameraZoom;
-                    const worldY = (mouseY - cameraY) / cameraZoom;
-                    creationStartX = worldX;
-                    creationStartY = worldY;
-                    lastMouseX = mouseX;
-                    lastMouseY = mouseY;
-                }
             } else if (e.ctrlKey || e.metaKey) {
                 // Ctrl/Cmd + Drag: Pan camera
                 isDraggingCamera = true;
@@ -1475,21 +1145,19 @@
                 lastMouseY = mouseY;
                 canvas.style.cursor = 'grabbing';
             } else {
-                // Regular click: Select/drag body (academic mode only)
-                if (!gameMode) {
-                    const worldX = (mouseX - cameraX) / cameraZoom;
-                    const worldY = (mouseY - cameraY) / cameraZoom;
-                    const bodyIndex = Module._findBodyAtPosition(worldX, worldY);
-                    if (bodyIndex >= 0) {
-                        draggedBodyIndex = bodyIndex;
-                        isDraggingBody = true;
-                        selectedBodyIndex = bodyIndex;
-                        canvas.style.cursor = 'move';
-                        updateBodyInfo(bodyIndex);
-                    } else {
-                        selectedBodyIndex = -1;
-                        hideBodyInfo();
-                    }
+                // Regular click: Select/drag body
+                const worldX = (mouseX - cameraX) / cameraZoom;
+                const worldY = (mouseY - cameraY) / cameraZoom;
+                const bodyIndex = Module._findBodyAtPosition(worldX, worldY);
+                if (bodyIndex >= 0) {
+                    draggedBodyIndex = bodyIndex;
+                    isDraggingBody = true;
+                    selectedBodyIndex = bodyIndex;
+                    canvas.style.cursor = 'move';
+                    updateBodyInfo(bodyIndex);
+                } else {
+                    selectedBodyIndex = -1;
+                    hideBodyInfo();
                 }
             }
         }
@@ -1535,43 +1203,24 @@
                 const worldEndX = (endX - cameraX) / cameraZoom;
                 const worldEndY = (endY - cameraY) / cameraZoom;
                 
-                // Game mode: Deploy spacecraft
-                if (gameMode && deployMode) {
-                    const vx = (worldEndX - deployStartX) * 0.02;
-                    const vy = (worldEndY - deployStartY) * 0.02;
-                    
-                    // Deploy spacecraft via C++ API
-                    Module._deploySpacecraft(deployStartX, deployStartY, vx, vy);
-                    
-                    // Calculate delta-V for display
-                    const deltaV = Math.sqrt(vx * vx + vy * vy) * 1000; // Rough conversion
-                    document.getElementById('deltaVUsed').textContent = deltaV.toFixed(0) + ' m/s';
-                    
-                    deployMode = false;
-                    document.getElementById('deployBtn').textContent = 'Spacecraft Deployed';
-                    canvas.style.cursor = 'default';
-                    
-                    document.getElementById('hudMessage').textContent = 'Spacecraft deployed! Monitoring intercept trajectory...';
-                } else if (!gameMode) {
-                    // Academic mode: Create new body
-                    const vx = (worldEndX - creationStartX) * 0.02;
-                    const vy = (worldEndY - creationStartY) * 0.02;
-                    
-                    // Random planet-like colors
-                    const colors = [
-                        0x3498DBFF,  // Earth blue
-                        0xE74C3CFF,  // Mars red
-                        0xF39C12FF,  // Venus yellow
-                        0x9B59B6FF,  // Neptune purple
-                        0x1ABC9CFF,  // Uranus turquoise
-                        0xE67E22FF,  // Jupiter orange
-                        0xF4D03FFF,  // Saturn yellow
-                        0xA2D5F2FF   // Ice world blue
-                    ];
-                    const color = colors[Math.floor(Math.random() * colors.length)];
-                    
-                    Module._addBody(creationStartX, creationStartY, vx, vy, 50.0, 10.0, color);
-                }
+                // Create new body
+                const vx = (worldEndX - creationStartX) * 0.02;
+                const vy = (worldEndY - creationStartY) * 0.02;
+                
+                // Random planet-like colors
+                const colors = [
+                    0x3498DBFF,  // Earth blue
+                    0xE74C3CFF,  // Mars red
+                    0xF39C12FF,  // Venus yellow
+                    0x9B59B6FF,  // Neptune purple
+                    0x1ABC9CFF,  // Uranus turquoise
+                    0xE67E22FF,  // Jupiter orange
+                    0xF4D03FFF,  // Saturn yellow
+                    0xA2D5F2FF   // Ice world blue
+                ];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                
+                Module._addBody(creationStartX, creationStartY, vx, vy, 50.0, 10.0, color);
                 
                 isCreatingBody = false;
             }
@@ -1583,9 +1232,7 @@
             isDraggingBody = false;
             isDraggingCamera = false;
             draggedBodyIndex = -1;
-            if (!deployMode) {
-                canvas.style.cursor = 'default';
-            }
+            canvas.style.cursor = 'default';
         }
         
         function handleWheel(e) {

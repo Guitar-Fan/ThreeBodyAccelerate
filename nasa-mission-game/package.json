@@ -1,0 +1,30 @@
+{
+  "name": "nasa-mission-game",
+  "version": "1.0.0",
+  "description": "NASA Asteroid Defense - Interactive Three Body Physics Mission Game",
+  "main": "public/index.html",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "serve": "python3 -m http.server 8080 --directory public"
+  },
+  "keywords": [
+    "nasa",
+    "asteroid",
+    "three-body",
+    "physics",
+    "game",
+    "wasm"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "pixi.js": "^7.3.2",
+    "chart.js": "^4.4.0",
+    "gsap": "^3.12.5"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}

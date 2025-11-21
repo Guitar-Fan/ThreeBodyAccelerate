@@ -1,0 +1,226 @@
+{
+  "difficulties": {
+    "easy": {
+      "name": "Easy",
+      "description": "Perfect for learning orbital mechanics",
+      "asteroidMass": 1e12,
+      "asteroidVelocity": 15000,
+      "timeToImpact": 120,
+      "spacecraftDeltaV": 5000,
+      "correctionsAllowed": 2,
+      "timeScale": 86400,
+      "scoringMultiplier": 1.0
+    },
+    "medium": {
+      "name": "Medium",
+      "description": "Standard mission parameters",
+      "asteroidMass": 5e12,
+      "asteroidVelocity": 20000,
+      "timeToImpact": 90,
+      "spacecraftDeltaV": 3500,
+      "correctionsAllowed": 1,
+      "timeScale": 86400,
+      "scoringMultiplier": 1.5
+    },
+    "hard": {
+      "name": "Hard",
+      "description": "Challenging deflection scenario",
+      "asteroidMass": 1e13,
+      "asteroidVelocity": 25000,
+      "timeToImpact": 60,
+      "spacecraftDeltaV": 2500,
+      "correctionsAllowed": 1,
+      "timeScale": 86400,
+      "scoringMultiplier": 2.0
+    },
+    "expert": {
+      "name": "Expert",
+      "description": "Near-impossible odds",
+      "asteroidMass": 5e13,
+      "asteroidVelocity": 30000,
+      "timeToImpact": 45,
+      "spacecraftDeltaV": 2000,
+      "correctionsAllowed": 0,
+      "timeScale": 86400,
+      "scoringMultiplier": 3.0
+    }
+  },
+  "scenarios": [
+    {
+      "id": "2025-xf11",
+      "name": "Asteroid 2025-XF11",
+      "description": "A 500-meter diameter asteroid detected 90 days from potential Earth impact. Impact probability: 87%. Your mission: deploy a spacecraft to alter its trajectory using three-body gravitational dynamics.",
+      "asteroidSize": 500,
+      "impactProbability": 0.87,
+      "scientificContext": "This scenario demonstrates the practical application of three-body orbital mechanics in planetary defense. The Moon's gravitational influence can be leveraged for trajectory corrections."
+    },
+    {
+      "id": "binary-threat",
+      "name": "Binary Asteroid System",
+      "description": "A binary asteroid system approaching Earth. The larger body is 800m in diameter. Deflecting one will affect both due to mutual gravitational attraction.",
+      "asteroidSize": 800,
+      "impactProbability": 0.65,
+      "scientificContext": "Binary asteroids represent ~15% of near-Earth objects. Their dynamics follow the restricted three-body problem with the Earth-Moon-Asteroid system."
+    }
+  ],
+  "strategies": {
+    "kinetic": {
+      "name": "Kinetic Impactor",
+      "description": "Direct collision with the asteroid. High delta-V requirement but immediate effect.",
+      "momentumMultiplier": 1.0,
+      "deltaVCost": 1.0,
+      "effectRadius": 0,
+      "impactBonus": 150
+    },
+    "gravity": {
+      "name": "Gravity Tractor",
+      "description": "Hover near asteroid using gravitational attraction. Low delta-V but requires precise positioning.",
+      "momentumMultiplier": 0.3,
+      "deltaVCost": 0.5,
+      "effectRadius": 5000,
+      "precisionBonus": 200
+    },
+    "explosive": {
+      "name": "Explosive Device",
+      "description": "Detonation near surface. Moderate delta-V with area effect. Risky but effective.",
+      "momentumMultiplier": 1.5,
+      "deltaVCost": 0.8,
+      "effectRadius": 2000,
+      "explosiveBonus": 175
+    }
+  },
+  "scoring": {
+    "missDistanceThresholds": {
+      "safe": 150000,
+      "optimal": 300000,
+      "excellent": 500000
+    },
+    "missDistanceFormula": {
+      "description": "Exponential curve: base score 100 at 2x safe distance, max 1000 at 10x safe distance",
+      "baseScore": 100,
+      "maxScore": 1000,
+      "safeMultiplier": 2,
+      "maxMultiplier": 10
+    },
+    "deltaVEfficiency": {
+      "description": "Linear bonus: unused fuel percentage * 200",
+      "maxBonus": 200
+    },
+    "timeEfficiency": {
+      "description": "Completing faster adds multiplier: 1.0 to 2.0 based on time remaining",
+      "minMultiplier": 1.0,
+      "maxMultiplier": 2.0
+    },
+    "precisionBonus": {
+      "description": "Intercept within optimal launch window: +250 points",
+      "bonus": 250
+    }
+  },
+  "achievements": [
+    {
+      "id": "gravity-guru",
+      "name": "Gravity Guru",
+      "description": "Use Moon's gravity assist for trajectory correction",
+      "icon": "🌙",
+      "points": 100,
+      "requirement": "moonSlingshot"
+    },
+    {
+      "id": "fuel-efficient",
+      "name": "Fuel Efficient",
+      "description": "Complete mission with >50% delta-V remaining",
+      "icon": "⛽",
+      "points": 150,
+      "requirement": "deltaVRemaining > 0.5"
+    },
+    {
+      "id": "last-second",
+      "name": "Last Second Save",
+      "description": "Intercept with less than 5% time remaining",
+      "icon": "⏱️",
+      "points": 200,
+      "requirement": "timeRemaining < 0.05"
+    },
+    {
+      "id": "perfect-trajectory",
+      "name": "Perfect Trajectory",
+      "description": "Achieve mission score above 950",
+      "icon": "🎯",
+      "points": 250,
+      "requirement": "score > 950"
+    },
+    {
+      "id": "quick-deploy",
+      "name": "Quick Deploy",
+      "description": "Deploy spacecraft within first 10% of mission time",
+      "icon": "🚀",
+      "points": 100,
+      "requirement": "deployTime < 0.1"
+    },
+    {
+      "id": "no-corrections",
+      "name": "One Shot Wonder",
+      "description": "Complete mission without mid-course corrections",
+      "icon": "🎱",
+      "points": 175,
+      "requirement": "corrections === 0"
+    },
+    {
+      "id": "expert-complete",
+      "name": "Expert Defender",
+      "description": "Successfully complete Expert difficulty",
+      "icon": "🏆",
+      "points": 300,
+      "requirement": "difficulty === 'expert' && success"
+    },
+    {
+      "id": "three-body-master",
+      "name": "Three-Body Master",
+      "description": "Complete all difficulty levels with score >700",
+      "icon": "👑",
+      "points": 500,
+      "requirement": "allDifficultiesHigh"
+    }
+  ],
+  "physicsConstants": {
+    "G": 6.67430e-11,
+    "earthMass": 5.972e24,
+    "moonMass": 7.342e22,
+    "earthRadius": 6371000,
+    "moonRadius": 1737400,
+    "earthMoonDistance": 384400000,
+    "safeDistance": 150000000
+  },
+  "tutorialMissions": [
+    {
+      "id": "tutorial-1",
+      "name": "Kepler's Laws Basics",
+      "description": "Learn how orbital periods relate to distance",
+      "objectives": [
+        "Deploy a spacecraft into Earth orbit",
+        "Observe orbital period",
+        "Calculate velocity at different altitudes"
+      ]
+    },
+    {
+      "id": "tutorial-2",
+      "name": "Understanding Delta-V",
+      "description": "Master velocity changes and fuel consumption",
+      "objectives": [
+        "Perform orbital transfer",
+        "Minimize fuel usage",
+        "Reach target orbit"
+      ]
+    },
+    {
+      "id": "tutorial-3",
+      "name": "Three-Body Dynamics",
+      "description": "Experience gravitational interactions",
+      "objectives": [
+        "Deploy near Moon",
+        "Use gravity assist",
+        "Reach target trajectory"
+      ]
+    }
+  ]
+}

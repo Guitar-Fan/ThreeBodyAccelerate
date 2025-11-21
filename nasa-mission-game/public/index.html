@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NASA Asteroid Defense - Mission Control</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Top Mission Bar -->
+    <header class="mission-header">
+        <div class="header-left">
+            <div class="nasa-logo">NASA</div>
+            <h1 class="mission-title">ASTEROID DEFENSE MISSION</h1>
+        </div>
+        <div class="header-center">
+            <div class="mission-phase" id="mission-phase">PLANNING</div>
+            <div class="mission-timer" id="mission-timer">T-00:00:00</div>
+        </div>
+        <div class="header-right">
+            <div class="score-display">
+                <span class="score-label">SCORE</span>
+                <span class="score-value" id="score-value">0</span>
+            </div>
+            <div class="multiplier" id="multiplier">×1.0</div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="mission-control">
+        <!-- Left Panel: Telemetry Dashboard -->
+        <aside class="left-panel">
+            <div class="panel-header">
+                <h2>TELEMETRY</h2>
+                <div class="panel-controls">
+                    <button class="icon-btn" id="collapse-telemetry">−</button>
+                </div>
+            </div>
+            <div class="panel-content" id="telemetry-content">
+                <div class="telemetry-section">
+                    <h3>Threat Analysis</h3>
+                    <canvas id="threat-chart" class="chart-canvas"></canvas>
+                </div>
+                <div class="telemetry-section">
+                    <h3>Delta-V Consumption</h3>
+                    <canvas id="deltav-chart" class="chart-canvas"></canvas>
+                </div>
+                <div class="telemetry-section">
+                    <h3>Energy Transfer</h3>
+                    <canvas id="energy-chart" class="chart-canvas"></canvas>
+                </div>
+                <div class="telemetry-stats">
+                    <div class="stat-row">
+                        <span class="stat-label">Current Distance</span>
+                        <span class="stat-value" id="current-distance">-- km</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Relative Velocity</span>
+                        <span class="stat-value" id="relative-velocity">-- km/s</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Closest Approach</span>
+                        <span class="stat-value" id="closest-approach">-- km</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center: Main Viewport -->
+        <section class="viewport-container">
+            <div id="viewport" class="viewport"></div>
+            
+            <!-- HUD Overlays -->
+            <div class="hud-overlay">
+                <div class="body-labels" id="body-labels"></div>
+                <div class="trajectory-info" id="trajectory-info"></div>
+            </div>
+
+            <!-- Camera Controls -->
+            <div class="camera-controls">
+                <button class="cam-btn" id="cam-zoom-in">+</button>
+                <button class="cam-btn" id="cam-zoom-out">−</button>
+                <button class="cam-btn" id="cam-reset">⌂</button>
+                <button class="cam-btn" id="cam-track" title="Auto-track">◎</button>
+            </div>
+        </section>
+
+        <!-- Right Panel: Mission Control -->
+        <aside class="right-panel">
+            <div class="panel-header">
+                <h2>MISSION CONTROL</h2>
+                <div class="panel-controls">
+                    <button class="icon-btn" id="collapse-control">−</button>
+                </div>
+            </div>
+            <div class="panel-content" id="control-content">
+                <!-- Mission Briefing -->
+                <div class="accordion-section" data-section="briefing">
+                    <div class="accordion-header">
+                        <h3>Mission Briefing</h3>
+                        <span class="accordion-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <div class="briefing-text" id="briefing-text">
+                            <p><strong>Mission Objective:</strong> Deflect asteroid before Earth impact.</p>
+                            <p id="threat-description">Loading mission parameters...</p>
+                        </div>
+                        <div class="difficulty-selector">
+                            <label>Difficulty:</label>
+                            <select id="difficulty-select">
+                                <option value="easy">Easy</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="hard">Hard</option>
+                                <option value="expert">Expert</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Spacecraft Status -->
+                <div class="accordion-section" data-section="spacecraft">
+                    <div class="accordion-header">
+                        <h3>Spacecraft Status</h3>
+                        <span class="accordion-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <div class="status-grid">
+                            <div class="status-item">
+                                <span class="status-label">Fuel</span>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="fuel-bar"></div>
+                                </div>
+                                <span class="status-value" id="fuel-value">100%</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Mass</span>
+                                <span class="status-value" id="mass-value">500 kg</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Position</span>
+                                <span class="status-value" id="position-value">Earth Orbit</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Velocity</span>
+                                <span class="status-value" id="velocity-value">7.8 km/s</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Deployment Controls -->
+                <div class="accordion-section active" data-section="deployment">
+                    <div class="accordion-header">
+                        <h3>Deployment Interface</h3>
+                        <span class="accordion-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <div class="deployment-controls">
+                            <div class="control-group">
+                                <label>Launch Velocity (km/s)</label>
+                                <input type="range" id="launch-velocity" min="0" max="15" step="0.1" value="11">
+                                <span class="control-value" id="launch-velocity-value">11.0</span>
+                            </div>
+                            <div class="control-group">
+                                <label>Launch Angle (degrees)</label>
+                                <input type="range" id="launch-angle" min="0" max="360" step="1" value="90">
+                                <span class="control-value" id="launch-angle-value">90</span>
+                            </div>
+                            <div class="control-group">
+                                <label>Strategy</label>
+                                <select id="strategy-select">
+                                    <option value="kinetic">Kinetic Impactor</option>
+                                    <option value="gravity">Gravity Tractor</option>
+                                    <option value="explosive">Explosive Device</option>
+                                </select>
+                            </div>
+                            <div class="launch-window">
+                                <div class="window-indicator" id="launch-window-indicator"></div>
+                                <span class="window-label">Launch Window: <span id="window-status">OPTIMAL</span></span>
+                            </div>
+                            <button class="primary-btn" id="deploy-btn">DEPLOY SPACECRAFT</button>
+                            <button class="secondary-btn" id="correction-btn" disabled>MID-COURSE CORRECTION</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mission Log -->
+                <div class="accordion-section" data-section="log">
+                    <div class="accordion-header">
+                        <h3>Mission Log</h3>
+                        <span class="accordion-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <div class="mission-log" id="mission-log">
+                            <div class="log-entry">T+0:00:00 - Mission initialized</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Achievements -->
+                <div class="accordion-section" data-section="achievements">
+                    <div class="accordion-header">
+                        <h3>Achievements</h3>
+                        <span class="accordion-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <div class="achievements-grid" id="achievements-grid">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Bottom Status Bar -->
+    <footer class="status-bar">
+        <div class="status-item">
+            <span class="status-label">THREAT LEVEL:</span>
+            <span class="status-value threat-level" id="threat-level">CRITICAL</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Time to Impact:</span>
+            <span class="status-value" id="time-to-impact">90 days</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Miss Distance:</span>
+            <span class="status-value" id="miss-distance">-- km</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Resources:</span>
+            <span class="status-value" id="resources-remaining">100%</span>
+        </div>
+    </footer>
+
+    <!-- Modal Overlays -->
+    <div class="modal-overlay" id="mission-modal">
+        <div class="modal-content">
+            <h2 id="modal-title">Mission Result</h2>
+            <div id="modal-body"></div>
+            <div class="modal-actions">
+                <button class="primary-btn" id="modal-retry">TRY AGAIN</button>
+                <button class="secondary-btn" id="modal-menu">MAIN MENU</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Scripts -->
+    <script type="module" src="game.js"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+#!/bin/bash
+# Emscripten SDK Environment Setup
+# Source this file before building C++ to WASM:
+# source .emsdkrc
+
+source "/workspaces/ThreeBodyAccelerate/nasa-mission-game/emsdk/emsdk_env.sh"
+echo "✓ Emscripten environment activated"
+echo "  - emcc version: $(emcc --version | head -1)"
+echo "  - Ready to compile C++ to WebAssembly"
