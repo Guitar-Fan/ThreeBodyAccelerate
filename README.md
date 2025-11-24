@@ -4,6 +4,14 @@ An advanced three-body problem physics simulation using C++ compiled to WebAssem
 
 ## Features
 
+### 🎮 Interactive & Educational
+- **Challenge Mode**: Hunt for periodic orbits like the famous Figure-8 solution
+- **Particle Effects**: Stunning collision animations with physics-based particles
+- **Periodic Orbit Detection**: Automatic notification when bodies return to starting positions
+- **Achievement System**: Earn badges for physics milestones and discoveries
+- **Interactive Body Creation**: Shift+Drag to create custom bodies with velocities
+- **Gravitational Field Visualization**: See force lines when bodies interact closely
+
 ### Physics Implementation
 - **Custom Gravitational Calculations**: Pure implementation of Newton's Law of Universal Gravitation (F = G·m₁·m₂/r²)
 - **Multiple Integration Methods**:
@@ -15,6 +23,7 @@ An advanced three-body problem physics simulation using C++ compiled to WebAssem
   - Linear momentum conservation tracking
   - Center of mass computation
   - System property monitoring
+  - Conservation drift monitoring with color-coded warnings
 
 ### Advanced Controls
 - **Preset Configurations**:

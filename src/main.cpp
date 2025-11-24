@@ -31,6 +31,7 @@ struct Body {
     double mass;
     double radius;
     unsigned int color; // RGBA color
+    double charge;
     
     // Computed properties
     double kineticEnergy;
@@ -41,10 +42,10 @@ struct Body {
 std::vector<Body> bodies;
 std::vector<Body> initialBodies; // Store initial state for reset
 
-// Physics parameters
-double G = 1.0;         // Gravitational constant (scaled for simulation)
-double dt = 0.01;       // Time step
-double timeScale = 1.0; // Time multiplier
+// Physics parameters (scaled for a livelier but still stable simulation)
+double G = 6.0;         // Gravitational constant (scaled for simulation)
+double dt = 0.008;      // Base time step (smaller for stability)
+double timeScale = 2.0; // Run a bit faster so orbital motion is noticeable
 
 // Integration method selection
 enum IntegrationMethod {
@@ -59,9 +60,12 @@ bool enableCollisions = false;
 double collisionDamping = 0.8; // Coefficient of restitution
 bool enableMerging = true;     // Allow bodies to merge on collision
 bool enableTidalForces = false; // Tidal deformation effects
-double softeningLength = 0.0;   // Gravitational softening (OFF by default for pure Newton)
+double softeningLength = 0.5;   // Small Plummer softening keeps close passes stable by default
 bool conserveAngularMomentum = true; // Enforce angular momentum conservation
 bool enableGravitationalWaves = false; // Energy loss from GW radiation
+bool enableChargeForces = false;       // Electrostatic repulsion/attraction
+double electrostaticConstant = 1.0;    // Coulomb-like strength factor
+double fragmentationEnergyScale = 0.75; // Energy ratio threshold that triggers breakup
 
 // RKF45 adaptive parameters
 double rkfTolerance = 1e-6;     // Error tolerance for adaptive stepping
@@ -137,10 +141,16 @@ void loadFigureEight() {
     // Figure-eight initial conditions (scaled for visualization)
     // Equal masses - fundamental to classical three-body problem
     double mass = 1.0;  // Equal mass for all three bodies
+    double compactScale = 0.75; // Pull bodies closer together for stronger forces
+    double velocityBoost = 1.35; // Keep orbit period short under the higher G default
+    double centerX = 400.0;
+    double centerY = 300.0;
+    double spreadX = 50.0 * compactScale;
+    double spreadY = 87.0 * compactScale;
     
     bodies.push_back({
-        350.0, 300.0, 0.0,         // x, y, z (3D, z=0 for 2D view)
-        0.3471168, 0.5327706, 0.0, // vx, vy, vz
+        centerX - spreadX, centerY, 0.0,         // x, y, z (3D, z=0 for 2D view)
+        0.3471168 * velocityBoost, 0.5327706 * velocityBoost, 0.0, // vx, vy, vz
         0.0, 0.0, 0.0,             // ax, ay, az
         mass, 8.0,            // mass (equal), radius
         0x4A90E2FF,           // Earth blue
@@ -148,8 +158,8 @@ void loadFigureEight() {
     });
     
     bodies.push_back({
-        450.0, 300.0, 0.0,         // x, y, z
-        0.3471168, 0.5327706, 0.0, // vx, vy, vz (same as body 1)
+        centerX + spreadX, centerY, 0.0,         // x, y, z
+        0.3471168 * velocityBoost, 0.5327706 * velocityBoost, 0.0, // vx, vy, vz (same as body 1)
         0.0, 0.0, 0.0,             // ax, ay, az
         mass, 8.0,            // mass (equal), radius
         0xE74C3CFF,           // Mars red
@@ -157,8 +167,8 @@ void loadFigureEight() {
     });
     
     bodies.push_back({
-        400.0, 213.0, 0.0,         // x, y, z
-        -0.6942336, -1.0655412, 0.0, // vx, vy, vz (opposite of others)
+        centerX, centerY - spreadY, 0.0,         // x, y, z
+        -0.6942336 * velocityBoost, -1.0655412 * velocityBoost, 0.0, // vx, vy, vz (opposite of others)
         0.0, 0.0, 0.0,             // ax, ay, az
         mass, 8.0,            // mass (equal), radius
         0xF39C12FF,           // Venus yellow/orange
@@ -638,6 +648,21 @@ void calculateForces() {
             bodies[j].ax -= fx / bodies[j].mass;
             bodies[j].ay -= fy / bodies[j].mass;
             bodies[j].az -= fz / bodies[j].mass;
+
+            // Electrostatic forces (optional)
+            if (enableChargeForces && (bodies[i].charge != 0.0 || bodies[j].charge != 0.0)) {
+                double chargeForceMag = electrostaticConstant * bodies[i].charge * bodies[j].charge / softenedDistSq;
+                double fxCharge = chargeForceMag * dx / softenedDist;
+                double fyCharge = chargeForceMag * dy / softenedDist;
+                double fzCharge = chargeForceMag * dz / softenedDist;
+                // Repulsion: subtract from i, add to j (direction handled via sign of q1*q2)
+                bodies[i].ax -= fxCharge / bodies[i].mass;
+                bodies[i].ay -= fyCharge / bodies[i].mass;
+                bodies[i].az -= fzCharge / bodies[i].mass;
+                bodies[j].ax += fxCharge / bodies[j].mass;
+                bodies[j].ay += fyCharge / bodies[j].mass;
+                bodies[j].az += fzCharge / bodies[j].mass;
+            }
             
             // Optional: Tidal forces (quadrupole approximation)
             // Causes tidal deformation and heating
@@ -693,10 +718,82 @@ void calculateForces() {
 void handleCollisions() {
     if (!enableCollisions) return;
     
-    std::vector<size_t> bodiesToRemove;
+    std::vector<bool> removed(bodies.size(), false);
+    std::vector<Body> fragmentsToAdd;
+    
+    auto blendColor = [](unsigned int c1, unsigned int c2, double ratio) -> unsigned int {
+        ratio = std::clamp(ratio, 0.0, 1.0);
+        auto channel = [&](int shift) {
+            double v1 = (c1 >> shift) & 0xFF;
+            double v2 = (c2 >> shift) & 0xFF;
+            return static_cast<unsigned int>(v1 * ratio + v2 * (1.0 - ratio));
+        };
+        unsigned int r = channel(24);
+        unsigned int g = channel(16);
+        unsigned int b = channel(8);
+        return (r << 24) | (g << 16) | (b << 8) | 0xFF;
+    };
+    
+    auto lightenColor = [](unsigned int color, double amount) -> unsigned int {
+        amount = std::clamp(amount, 0.0, 1.0);
+        auto channel = [&](int shift) {
+            double base = (color >> shift) & 0xFF;
+            double boosted = base + (255.0 - base) * amount;
+            return static_cast<unsigned int>(std::min(255.0, boosted));
+        };
+        unsigned int r = channel(24);
+        unsigned int g = channel(16);
+        unsigned int b = channel(8);
+        return (r << 24) | (g << 16) | (b << 8) | 0xFF;
+    };
+    
+    auto spawnFragments = [&](const Body& first, const Body& second, double relSpeed) {
+        double totalMass = first.mass + second.mass;
+        if (totalMass <= 0.0) {
+            return;
+        }
+        double totalCharge = first.charge + second.charge;
+        double comX = (first.x * first.mass + second.x * second.mass) / totalMass;
+        double comY = (first.y * first.mass + second.y * second.mass) / totalMass;
+        double comZ = (first.z * first.mass + second.z * second.mass) / totalMass;
+        double comVx = (first.vx * first.mass + second.vx * second.mass) / totalMass;
+        double comVy = (first.vy * first.mass + second.vy * second.mass) / totalMass;
+        double comVz = (first.vz * first.mass + second.vz * second.mass) / totalMass;
+        unsigned int baseColor = blendColor(first.color, second.color, first.mass / totalMass);
+        int fragmentCount = std::clamp(static_cast<int>(std::round(totalMass / 5.0)), 3, 6);
+        double angleStep = (2.0 * M_PI) / fragmentCount;
+        double assignedMass = 0.0;
+        for (int f = 0; f < fragmentCount; ++f) {
+            double massShare = totalMass / fragmentCount;
+            if (f == fragmentCount - 1) {
+                massShare = std::max(0.01, totalMass - assignedMass);
+            }
+            assignedMass += massShare;
+            double angle = angleStep * f;
+            double offset = (first.radius + second.radius) * 0.35;
+            double kick = relSpeed * 0.5;
+            Body fragment{};
+            fragment.mass = massShare;
+            fragment.radius = std::max(3.0, 4.0 + pow(fragment.mass / 10.0, 0.4) * 4.0);
+            fragment.x = comX + cos(angle) * offset;
+            fragment.y = comY + sin(angle) * offset;
+            fragment.z = comZ;
+            fragment.vx = comVx + cos(angle) * kick;
+            fragment.vy = comVy + sin(angle) * kick;
+            fragment.vz = comVz + ((f % 2 == 0) ? 0.2 : -0.2) * kick;
+            fragment.ax = fragment.ay = fragment.az = 0.0;
+            fragment.color = lightenColor(baseColor, 0.15 + 0.1 * f);
+            fragment.charge = (totalCharge / totalMass) * fragment.mass;
+            fragment.kineticEnergy = 0.0;
+            fragment.potentialEnergy = 0.0;
+            fragmentsToAdd.push_back(fragment);
+        }
+    };
     
     for (size_t i = 0; i < bodies.size(); i++) {
+        if (removed[i]) continue;
         for (size_t j = i + 1; j < bodies.size(); j++) {
+            if (removed[j]) continue;
             double dx = bodies[j].x - bodies[i].x;
             double dy = bodies[j].y - bodies[i].y;
             double dz = bodies[j].z - bodies[i].z;
@@ -704,47 +801,38 @@ void handleCollisions() {
             double minDist = bodies[i].radius + bodies[j].radius;
             
             if (dist < minDist) {
-                // Collision detected!
                 double m1 = bodies[i].mass;
                 double m2 = bodies[j].mass;
                 double totalMass = m1 + m2;
-                
-                // Relative velocity magnitude
                 double dvx = bodies[j].vx - bodies[i].vx;
                 double dvy = bodies[j].vy - bodies[i].vy;
                 double dvz = bodies[j].vz - bodies[i].vz;
                 double relSpeed = sqrt(dvx * dvx + dvy * dvy + dvz * dvz);
-                
-                // Escape velocity from larger body
+                double reducedMass = (m1 * m2) / std::max(totalMass, 1e-6);
+                double kineticImpact = 0.5 * reducedMass * relSpeed * relSpeed;
+                double bindingEnergy = G * m1 * m2 / std::max(dist, 1.0);
                 double largerMass = std::max(m1, m2);
-                double escapeVel = sqrt(2.0 * G * largerMass / minDist);
+                double escapeVel = sqrt(2.0 * G * largerMass / std::max(minDist, 1.0));
+                bool boundContact = kineticImpact < bindingEnergy && relSpeed < escapeVel;
+                bool shouldFragment = relSpeed > escapeVel * 1.2 || kineticImpact > bindingEnergy * fragmentationEnergyScale;
                 
-                // If collision is catastrophic (rel velocity > escape velocity), merge bodies
-                if (enableMerging && relSpeed > escapeVel * 0.5) {
-                    // MERGING: Perfectly inelastic collision
-                    // Conserve momentum
+                if (shouldFragment) {
+                    spawnFragments(bodies[i], bodies[j], relSpeed);
+                    removed[i] = true;
+                    removed[j] = true;
+                    break; // body i destroyed, move to next i
+                }
+                
+                bool gentleMerge = enableMerging && boundContact && relSpeed < escapeVel * 0.5;
+                if (gentleMerge) {
                     double newVx = (m1 * bodies[i].vx + m2 * bodies[j].vx) / totalMass;
                     double newVy = (m1 * bodies[i].vy + m2 * bodies[j].vy) / totalMass;
                     double newVz = (m1 * bodies[i].vz + m2 * bodies[j].vz) / totalMass;
-                    
-                    // Position weighted by mass (center of mass)
                     double newX = (m1 * bodies[i].x + m2 * bodies[j].x) / totalMass;
                     double newY = (m1 * bodies[i].y + m2 * bodies[j].y) / totalMass;
                     double newZ = (m1 * bodies[i].z + m2 * bodies[j].z) / totalMass;
-                    
-                    // New radius: assume constant density, V ~ r^3, V1 + V2 = V_new
                     double newRadius = pow(pow(bodies[i].radius, 3) + pow(bodies[j].radius, 3), 1.0/3.0);
-                    
-                    // Color blend based on mass ratio
-                    unsigned int c1 = bodies[i].color;
-                    unsigned int c2 = bodies[j].color;
-                    double ratio = m1 / totalMass;
-                    unsigned int r = (unsigned int)(((c1 >> 24) & 0xFF) * ratio + ((c2 >> 24) & 0xFF) * (1-ratio));
-                    unsigned int g = (unsigned int)(((c1 >> 16) & 0xFF) * ratio + ((c2 >> 16) & 0xFF) * (1-ratio));
-                    unsigned int b = (unsigned int)(((c1 >> 8) & 0xFF) * ratio + ((c2 >> 8) & 0xFF) * (1-ratio));
-                    unsigned int newColor = (r << 24) | (g << 16) | (b << 8) | 0xFF;
-                    
-                    // Update larger body (keep index i)
+                    unsigned int newColor = blendColor(bodies[i].color, bodies[j].color, m1 / totalMass);
                     bodies[i].x = newX;
                     bodies[i].y = newY;
                     bodies[i].z = newZ;
@@ -754,56 +842,45 @@ void handleCollisions() {
                     bodies[i].mass = totalMass;
                     bodies[i].radius = newRadius;
                     bodies[i].color = newColor;
-                    
-                    // Mark smaller body for removal
-                    bodiesToRemove.push_back(j);
-                } else {
-                    // ELASTIC/INELASTIC BOUNCE
-                    // Normal vector
-                    double nx = dx / dist;
-                    double ny = dy / dist;
-                    double nz = dz / dist;
-                    
-                    // Relative velocity along normal
-                    double vrel = dvx * nx + dvy * ny + dvz * nz;
-                    
-                    // Only resolve if bodies are moving toward each other
-                    if (vrel < 0) {
-                        // Impulse magnitude: J = -(1 + e) * v_rel / (1/m1 + 1/m2)
-                        double impulse = -(1.0 + collisionDamping) * vrel / (1.0/m1 + 1.0/m2);
-                        
-                        // Apply impulse (Newton's third law)
-                        bodies[i].vx -= impulse * nx / m1;
-                        bodies[i].vy -= impulse * ny / m1;
-                        bodies[i].vz -= impulse * nz / m1;
-                        bodies[j].vx += impulse * nx / m2;
-                        bodies[j].vy += impulse * ny / m2;
-                        bodies[j].vz += impulse * nz / m2;
-                        
-                        // Separate bodies to prevent overlap
-                        double overlap = minDist - dist;
-                        // Separation proportional to inverse mass (lighter body moves more)
-                        double totalInvMass = 1.0/m1 + 1.0/m2;
-                        double sep1 = overlap * (1.0/m1) / totalInvMass;
-                        double sep2 = overlap * (1.0/m2) / totalInvMass;
-                        
-                        bodies[i].x -= nx * sep1;
-                        bodies[i].y -= ny * sep1;
-                        bodies[i].z -= nz * sep1;
-                        bodies[j].x += nx * sep2;
-                        bodies[j].y += ny * sep2;
-                        bodies[j].z += nz * sep2;
-                    }
+                    bodies[i].charge = bodies[i].charge + bodies[j].charge;
+                    removed[j] = true;
+                    continue;
+                }
+                
+                // Otherwise bounce with restitution
+                double nx = dx / std::max(dist, 1e-6);
+                double ny = dy / std::max(dist, 1e-6);
+                double nz = dz / std::max(dist, 1e-6);
+                double vrel = dvx * nx + dvy * ny + dvz * nz;
+                if (vrel < 0) {
+                    double impulse = -(1.0 + collisionDamping) * vrel / (1.0/m1 + 1.0/m2);
+                    bodies[i].vx -= impulse * nx / m1;
+                    bodies[i].vy -= impulse * ny / m1;
+                    bodies[i].vz -= impulse * nz / m1;
+                    bodies[j].vx += impulse * nx / m2;
+                    bodies[j].vy += impulse * ny / m2;
+                    bodies[j].vz += impulse * nz / m2;
+                    double overlap = minDist - dist;
+                    double totalInvMass = 1.0/m1 + 1.0/m2;
+                    double sep1 = overlap * (1.0/m1) / totalInvMass;
+                    double sep2 = overlap * (1.0/m2) / totalInvMass;
+                    bodies[i].x -= nx * sep1;
+                    bodies[i].y -= ny * sep1;
+                    bodies[i].z -= nz * sep1;
+                    bodies[j].x += nx * sep2;
+                    bodies[j].y += ny * sep2;
+                    bodies[j].z += nz * sep2;
                 }
             }
         }
     }
     
-    // Remove merged bodies (in reverse order to maintain indices)
-    std::sort(bodiesToRemove.begin(), bodiesToRemove.end(), std::greater<size_t>());
-    for (size_t idx : bodiesToRemove) {
-        bodies.erase(bodies.begin() + idx);
+    for (int idx = static_cast<int>(bodies.size()) - 1; idx >= 0; --idx) {
+        if (idx >= 0 && idx < static_cast<int>(removed.size()) && removed[idx]) {
+            bodies.erase(bodies.begin() + idx);
+        }
     }
+    bodies.insert(bodies.end(), fragmentsToAdd.begin(), fragmentsToAdd.end());
 }
 
 /**
@@ -1438,7 +1515,7 @@ extern "C" {
         bodies.push_back({
             x, y, 0.0, vx, vy, 0.0, 0.0, 0.0, 0.0,
             mass, radius, color,
-            0.0, 0.0
+            0.0, 0.0, 0.0
         });
         initialBodies = bodies;
     }
@@ -1506,6 +1583,21 @@ extern "C" {
         if (index >= 0 && index < bodies.size()) {
             bodies[index].color = color;
         }
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    void setBodyCharge(int index, double charge) {
+        if (index >= 0 && index < bodies.size()) {
+            bodies[index].charge = charge;
+        }
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    double getBodyCharge(int index) {
+        if (index >= 0 && index < bodies.size()) {
+            return bodies[index].charge;
+        }
+        return 0.0;
     }
     
     EMSCRIPTEN_KEEPALIVE
@@ -1588,6 +1680,26 @@ extern "C" {
     EMSCRIPTEN_KEEPALIVE
     int getGravitationalWaves() {
         return enableGravitationalWaves ? 1 : 0;
+    }
+
+    EMSCRIPTEN_KEEPALIVE
+    void setChargeForces(int enabled) {
+        enableChargeForces = (enabled != 0);
+    }
+
+    EMSCRIPTEN_KEEPALIVE
+    int getChargeForces() {
+        return enableChargeForces ? 1 : 0;
+    }
+
+    EMSCRIPTEN_KEEPALIVE
+    void setElectrostaticConstant(double value) {
+        electrostaticConstant = std::max(0.0, value);
+    }
+
+    EMSCRIPTEN_KEEPALIVE
+    double getElectrostaticConstant() {
+        return electrostaticConstant;
     }
     
     EMSCRIPTEN_KEEPALIVE
