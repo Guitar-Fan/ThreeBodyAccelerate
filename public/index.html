@@ -515,6 +515,21 @@
             <input type="checkbox" id="gwCheck" onchange="toggleGravitationalWaves(this.checked)">
             <label for="gwCheck">Gravitational Waves</label>
         </div>
+
+        <div class="checkbox-container">
+            <input type="checkbox" id="boundaryCheck" onchange="toggleBoundaryMode(this.checked)">
+            <label for="boundaryCheck">Containment Boundary</label>
+        </div>
+
+        <div class="control-group">
+            <label>Boundary Padding: <span id="boundaryPaddingValue">40</span></label>
+            <input type="range" id="boundaryPaddingSlider" min="10" max="150" step="5" value="40" oninput="updateBoundaryPadding(this.value)">
+        </div>
+
+        <div class="control-group">
+            <label>Boundary Bounce: <span id="boundaryBounceValue">0.90</span></label>
+            <input type="range" id="boundaryBounceSlider" min="0.1" max="1" step="0.05" value="0.9" oninput="updateBoundaryBounce(this.value)">
+        </div>
         
         <div class="control-group">
             <label>Softening: <span id="softeningValue">0.5</span></label>
@@ -747,6 +762,67 @@
         // Energy history for graphing
         let energyHistory = [];
         const maxHistoryLength = 200;
+        const UNIT_LENGTH_IN_KM = 1000; // assume 1 canvas unit ≈ 1000 km for display labels
+        const UNIT_TIME_IN_SECONDS = 3600; // treat dt units as roughly one hour for km/s estimation
+        const UNIT_VELOCITY_IN_KM_PER_S = UNIT_LENGTH_IN_KM / UNIT_TIME_IN_SECONDS;
+        const DIALOGUE_DURATION_MS = 6000;
+        const DIALOGUE_GAP_MS = 1500;
+        let hudPhase = 0;
+        const physicsQuips = [
+            "Photon checking in—traveling light, of course!",
+            "I'm not lazy, I'm conserving energy.",
+            "Gravity keeps pulling me back into drama.",
+            "I orbit because running in circles burns calories.",
+            "Charge me up before you go-go.",
+            "Is it hot in here or is it just my kinetic energy?",
+            "Please respect my personal space-time.",
+            "I tried to be punctual but time dilated.",
+            "You call it chaos, I call it choreography.",
+            "Keep pushing me and I'll go quantum on you.",
+            "Friction? Never met her.",
+            "Mass times sass equals attitude.",
+            "I'm in a stable relationship—with my orbit.",
+            "Just because I'm eccentric doesn't mean I'm unstable.",
+            "Charge ahead, regret later.",
+            "My potential energy is unmatched.",
+            "Stop staring; it's making my wavefunction collapse.",
+            "Momentum called—it wants to keep going.",
+            "I'm positively charged with negativity.",
+            "Is there an off switch for tidal drama?",
+            "Who scheduled this close encounter?",
+            "I fling jokes at the speed of light.",
+            "These collisions are getting out of hand.",
+            "Orbiting: the cosmic version of pacing.",
+            "Angular momentum? More like angular annoyance.",
+            "Rest mass? Never heard of her.",
+            "I only repel when absolutely necessary.",
+            "My feelings are quantized—take it or leave it.",
+            "Please stop poking my potential well.",
+            "Center of mass? More like center of attention.",
+            "Why yes, my field is indeed intense.",
+            "I came, I saw, I accelerated.",
+            "Keep calm and integrate numerically.",
+            "My orbit predicted this conversation.",
+            "Force equals ma, and I'm full of a.",
+            "Not to boast, but my charge is attractive.",
+            "Another day, another conservation law.",
+            "I can't even—angular momentum says so.",
+            "Stop colliding with my vibe.",
+            "If you're not part of the solution, you're precipitating.",
+            "I'm inelastic when it suits me.",
+            "Bond with me and it's a stable union.",
+            "Drag me one more time and I'll fragment.",
+            "My jokes are superluminal—try to catch up.",
+            "At least my charge has personality.",
+            "Event horizon? Sounds like a boundary issue.",
+            "This simulation needs more snacks.",
+            "Field lines? I prefer field vibes.",
+            "Zero-point energy keeps me awake at night.",
+            "Annoyed? I'm positively fuming.",
+            "You're blocking my path integral!"
+        ];
+        const dialogueState = new Map();
+        let lastDialogueBodyCount = 0;
         
         function toggleSimulation() {
             isRunning = !isRunning;
@@ -854,6 +930,20 @@
             document.getElementById('newBodyChargeValue').textContent = newBodyCharge.toFixed(2);
         }
 
+        function toggleBoundaryMode(enabled) {
+            Module._setBoundaryMode(enabled ? 1 : 0);
+        }
+
+        function updateBoundaryPadding(value) {
+            Module._setBoundaryPadding(parseFloat(value));
+            document.getElementById('boundaryPaddingValue').textContent = parseFloat(value).toFixed(0);
+        }
+
+        function updateBoundaryBounce(value) {
+            Module._setBoundaryRestitution(parseFloat(value));
+            document.getElementById('boundaryBounceValue').textContent = parseFloat(value).toFixed(2);
+        }
+
         function syncPhysicsDefaults() {
             // Ensure WASM side uses the same defaults shown in the UI controls
             updateG(document.getElementById('gSlider').value);
@@ -868,6 +958,9 @@
             toggleChargeForces(document.getElementById('chargeCheck').checked);
             updateChargeStrength(document.getElementById('chargeStrengthSlider').value);
             updateNewBodyCharge(document.getElementById('newBodyChargeSlider').value);
+            toggleBoundaryMode(document.getElementById('boundaryCheck').checked);
+            updateBoundaryPadding(document.getElementById('boundaryPaddingSlider').value);
+            updateBoundaryBounce(document.getElementById('boundaryBounceSlider').value);
         }
         
         function updateBodyInfo(bodyIndex) {
@@ -1067,6 +1160,135 @@
             ctx.lineTo(endX - headLen * Math.cos(angle + Math.PI/6), 
                       endY - headLen * Math.sin(angle + Math.PI/6));
             ctx.stroke();
+        }
+        
+        function drawBodyHud(x, y, radius, vx, vy, charge, index) {
+            const speed = Math.sqrt(vx * vx + vy * vy) * UNIT_VELOCITY_IN_KM_PER_S;
+            const labelLines = [
+                `|v| ≈ ${speed.toFixed(2)} km/s`,
+                `q = ${charge.toFixed(2)} C`
+            ];
+            const padding = 6;
+            const lineHeight = 12;
+            const bubbleWidth = 130;
+            const bubbleHeight = labelLines.length * lineHeight + padding * 2;
+            const offsetX = (index % 2 === 0 ? 1 : -1) * (radius + 20);
+            const offsetY = Math.sin(hudPhase + index) * 5;
+            const bubbleX = x + offsetX - bubbleWidth / 2;
+            const bubbleY = y - radius - bubbleHeight - 5 + offsetY;
+            ctx.save();
+            ctx.globalAlpha = 0.85;
+            ctx.fillStyle = 'rgba(20,20,35,0.85)';
+            ctx.strokeStyle = 'rgba(80,150,255,0.8)';
+            ctx.lineWidth = 1;
+            const r = 6;
+            ctx.beginPath();
+            ctx.moveTo(bubbleX + r, bubbleY);
+            ctx.lineTo(bubbleX + bubbleWidth - r, bubbleY);
+            ctx.quadraticCurveTo(bubbleX + bubbleWidth, bubbleY, bubbleX + bubbleWidth, bubbleY + r);
+            ctx.lineTo(bubbleX + bubbleWidth, bubbleY + bubbleHeight - r);
+            ctx.quadraticCurveTo(bubbleX + bubbleWidth, bubbleY + bubbleHeight, bubbleX + bubbleWidth - r, bubbleY + bubbleHeight);
+            ctx.lineTo(bubbleX + r, bubbleY + bubbleHeight);
+            ctx.quadraticCurveTo(bubbleX, bubbleY + bubbleHeight, bubbleX, bubbleY + bubbleHeight - r);
+            ctx.lineTo(bubbleX, bubbleY + r);
+            ctx.quadraticCurveTo(bubbleX, bubbleY, bubbleX + r, bubbleY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = '#e0e4ff';
+            ctx.font = '11px "JetBrains Mono", monospace';
+            ctx.textBaseline = 'top';
+            labelLines.forEach((line, idx) => {
+                ctx.fillText(line, bubbleX + padding, bubbleY + padding + idx * lineHeight);
+            });
+            ctx.restore();
+        }
+        
+        function wrapDialogueText(text, maxChars) {
+            const words = text.split(' ');
+            const lines = [];
+            let current = '';
+            for (const word of words) {
+                if ((current + word).length > maxChars) {
+                    lines.push(current.trim());
+                    current = word + ' ';
+                } else {
+                    current += word + ' ';
+                }
+            }
+            if (current.trim().length) {
+                lines.push(current.trim());
+            }
+            return lines;
+        }
+        
+        function getDialogueForBody(index) {
+            const now = performance.now();
+            const existing = dialogueState.get(index);
+            if (!existing || now > existing.expireTime) {
+                const text = physicsQuips[Math.floor(Math.random() * physicsQuips.length)];
+                dialogueState.set(index, {
+                    text,
+                    expireTime: now + DIALOGUE_DURATION_MS + Math.random() * 2000,
+                    reappearTime: now + DIALOGUE_DURATION_MS + DIALOGUE_GAP_MS
+                });
+                return text;
+            }
+            if (now > existing.reappearTime) {
+                const text = physicsQuips[Math.floor(Math.random() * physicsQuips.length)];
+                dialogueState.set(index, {
+                    text,
+                    expireTime: now + DIALOGUE_DURATION_MS,
+                    reappearTime: now + DIALOGUE_DURATION_MS + DIALOGUE_GAP_MS
+                });
+                return text;
+            }
+            return existing.text;
+        }
+        
+        function drawDialogueBubble(x, y, radius, text, index) {
+            const lines = wrapDialogueText(text, 28);
+            const padding = 10;
+            const lineHeight = 14;
+            const bubbleHeight = padding * 2 + lines.length * lineHeight;
+            const bubbleWidth = 180;
+            const offsetDirection = index % 2 === 0 ? -1 : 1;
+            let bubbleX = x + offsetDirection * (radius + 30);
+            if (offsetDirection < 0) {
+                bubbleX -= bubbleWidth;
+            }
+            const bubbleY = y - radius - bubbleHeight - 20;
+            const pointerX = x + offsetDirection * radius * 0.5;
+            const pointerY = y - radius;
+            ctx.save();
+            ctx.globalAlpha = 0.9;
+            ctx.fillStyle = 'rgba(15,15,30,0.92)';
+            ctx.strokeStyle = offsetDirection > 0 ? '#ffb347' : '#8ef2ff';
+            ctx.lineWidth = 1.5;
+            const r = 10;
+            ctx.beginPath();
+            ctx.moveTo(bubbleX + r, bubbleY);
+            ctx.lineTo(bubbleX + bubbleWidth - r, bubbleY);
+            ctx.quadraticCurveTo(bubbleX + bubbleWidth, bubbleY, bubbleX + bubbleWidth, bubbleY + r);
+            ctx.lineTo(bubbleX + bubbleWidth, bubbleY + bubbleHeight - r);
+            ctx.quadraticCurveTo(bubbleX + bubbleWidth, bubbleY + bubbleHeight, bubbleX + bubbleWidth - r, bubbleY + bubbleHeight);
+            ctx.lineTo(pointerX + 8, bubbleY + bubbleHeight);
+            ctx.lineTo(pointerX, pointerY);
+            ctx.lineTo(pointerX - 8, bubbleY + bubbleHeight);
+            ctx.lineTo(bubbleX + r, bubbleY + bubbleHeight);
+            ctx.quadraticCurveTo(bubbleX, bubbleY + bubbleHeight, bubbleX, bubbleY + bubbleHeight - r);
+            ctx.lineTo(bubbleX, bubbleY + r);
+            ctx.quadraticCurveTo(bubbleX, bubbleY, bubbleX + r, bubbleY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = '#f4f4ff';
+            ctx.font = '12px "Arial", sans-serif';
+            ctx.textBaseline = 'top';
+            lines.forEach((line, idxLine) => {
+                ctx.fillText(line, bubbleX + padding, bubbleY + padding + idxLine * lineHeight);
+            });
+            ctx.restore();
         }
         
         function drawCenterOfMass(cmX, cmY) {
@@ -1287,6 +1509,7 @@
                     createCollisionParticles(collisionX, collisionY, prevPositions[0].color, prevPositions[1].color, 2.0);
                 }
             }
+            hudPhase += 0.02;
             
             // Trail effect
             if (showTrails) {
@@ -1311,6 +1534,10 @@
             
             // Draw gravitational interaction lines when bodies are close
             const bodyCount = Module._getBodyCount();
+            if (bodyCount !== lastDialogueBodyCount) {
+                dialogueState.clear();
+                lastDialogueBodyCount = bodyCount;
+            }
             for (let i = 0; i < bodyCount; i++) {
                 for (let j = i + 1; j < bodyCount; j++) {
                     const x1 = Module._getBodyX(i);
@@ -1340,6 +1567,9 @@
                 const y = Module._getBodyY(i);
                 const radius = Module._getBodyRadius(i);
                 const color = Module._getBodyColor(i);
+                const vx = Module._getBodyVX(i);
+                const vy = Module._getBodyVY(i);
+                const charge = Module._getBodyCharge(i);
                 
                 drawBody(x, y, radius, color);
                 
@@ -1353,9 +1583,12 @@
                 }
                 
                 if (showVelocityVectors) {
-                    const vx = Module._getBodyVX(i);
-                    const vy = Module._getBodyVY(i);
                     drawVelocityVector(x, y, vx, vy, color);
+                }
+                drawBodyHud(x, y, radius, vx, vy, charge, i);
+                const dialogue = getDialogueForBody(i);
+                if (dialogue) {
+                    drawDialogueBubble(x, y, radius, dialogue, i);
                 }
             }
             

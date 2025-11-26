@@ -66,6 +66,9 @@ bool enableGravitationalWaves = false; // Energy loss from GW radiation
 bool enableChargeForces = false;       // Electrostatic repulsion/attraction
 double electrostaticConstant = 1.0;    // Coulomb-like strength factor
 double fragmentationEnergyScale = 0.75; // Energy ratio threshold that triggers breakup
+bool enableBoundaryMode = false;        // Keep bodies inside a perimeter
+double boundaryPadding = 40.0;          // Padding from canvas edges
+double boundaryRestitution = 0.9;       // Energy preserved during boundary bounce
 
 // RKF45 adaptive parameters
 double rkfTolerance = 1e-6;     // Error tolerance for adaptive stepping
@@ -114,9 +117,9 @@ double energyDrift = 0.0;
 double momentumDrift = 0.0;
 double angularMomentumDrift = 0.0;
 
-// Canvas properties
-int canvasWidth = 800;
-int canvasHeight = 600;
+// Canvas properties (match public canvas default 900x700)
+int canvasWidth = 900;
+int canvasHeight = 700;
 
 // Preset configurations
 enum PresetType {
@@ -883,6 +886,32 @@ void handleCollisions() {
     bodies.insert(bodies.end(), fragmentsToAdd.begin(), fragmentsToAdd.end());
 }
 
+void enforceBoundaryBounce() {
+    if (!enableBoundaryMode) return;
+    double minX = boundaryPadding;
+    double maxX = std::max(boundaryPadding + 10.0, canvasWidth - boundaryPadding);
+    double minY = boundaryPadding;
+    double maxY = std::max(boundaryPadding + 10.0, canvasHeight - boundaryPadding);
+    for (auto& body : bodies) {
+        // X axis
+        if (body.x - body.radius < minX) {
+            body.x = minX + body.radius;
+            body.vx = fabs(body.vx) * boundaryRestitution;
+        } else if (body.x + body.radius > maxX) {
+            body.x = maxX - body.radius;
+            body.vx = -fabs(body.vx) * boundaryRestitution;
+        }
+        // Y axis
+        if (body.y - body.radius < minY) {
+            body.y = minY + body.radius;
+            body.vy = fabs(body.vy) * boundaryRestitution;
+        } else if (body.y + body.radius > maxY) {
+            body.y = maxY - body.radius;
+            body.vy = -fabs(body.vy) * boundaryRestitution;
+        }
+    }
+}
+
 /**
  * PHYSICS: Euler Method Integration (PDF Section 3.2, equations 9-10)
  * 
@@ -1289,6 +1318,7 @@ void updateBodies() {
             updateBodiesRKF45();
             break;
     }
+    enforceBoundaryBounce();
     calculateSystemProperties();
     evaluateMissionStatus();
 }
@@ -1700,6 +1730,36 @@ extern "C" {
     EMSCRIPTEN_KEEPALIVE
     double getElectrostaticConstant() {
         return electrostaticConstant;
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    void setBoundaryMode(int enabled) {
+        enableBoundaryMode = (enabled != 0);
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    int getBoundaryMode() {
+        return enableBoundaryMode ? 1 : 0;
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    void setBoundaryPadding(double padding) {
+        boundaryPadding = std::max(0.0, padding);
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    double getBoundaryPadding() {
+        return boundaryPadding;
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    void setBoundaryRestitution(double value) {
+        boundaryRestitution = std::clamp(value, 0.1, 1.0);
+    }
+    
+    EMSCRIPTEN_KEEPALIVE
+    double getBoundaryRestitution() {
+        return boundaryRestitution;
     }
     
     EMSCRIPTEN_KEEPALIVE
