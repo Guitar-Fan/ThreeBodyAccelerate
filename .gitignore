@@ -1,7 +1,5 @@
 # .gitignore
 build/
-public/*.js
-public/*.wasm
 *.o
 *.out
 *.log
